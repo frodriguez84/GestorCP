@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casos de Prueba</title>
+    <div class="theme-switch">
+        <label class="switch">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider"></span>
+        </label>
+        <span id="themeLabel">Modo Claro</span>
+    </div>
+    <link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Casos de Prueba</h1>
+            <div class="controls">
+                <button class="btn btn-info" id="btnConfigVars">⚙️ Configurar Variables</button>
+                <button class="btn btn-success" id="btnAddCase">➕ Nuevo Caso</button>
+                <button class="btn btn-info" id="btnLoadCases">📂 Cargar Casos</button>
+                <button class="btn btn-warning" id="btnSaveCases">💾 Guardar Casos</button>
+                <button class="btn btn-info" id="btnExportExcel">📊 Exportar Excel</button>
+                <button class="btn btn-danger" id="btnClearAll">🗑️ Limpiar Todo</button>
+            </div>
+
+
+        </div>
+
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>🔍 Buscar:</label>
+                    <input type="text" id="searchInput" placeholder="Buscar por descripción, tester, etc.">
+                </div>
+                <div class="filter-group">
+                    <label>👤 Tester:</label>
+                    <select id="testerFilter">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📊 Resultado Obtenido:</label>
+                    <select id="statusFilter">
+                        <option value="">Todos</option>
+                        <option value="OK">OK</option>
+                        <option value="NO">NO</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📅 Desde:</label>
+                    <input type="date" id="dateFromFilter">
+                </div>
+                <div class="filter-group">
+                    <label>📅 Hasta:</label>
+                    <input type="date" id="dateToFilter">
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar de acciones masivas (aparece cuando hay casos seleccionados) -->
+        <div id="bulkActionsToolbar" class="bulk-toolbar" style="display: none;">
+            <div class="bulk-toolbar-content">
+                <div class="bulk-info">
+                    <span id="selectedCounter">0 casos seleccionados</span>
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn btn-danger" onclick="deleteBulkCases()" title="Eliminar casos seleccionados">
+                        🗑️ Eliminar Seleccionados
+                    </button>
+                    <button class="btn btn-small" onclick="clearSelection()" title="Deseleccionar todos">
+                        ❌ Deseleccionar Todo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCases">0</div>
+                <div class="stat-label">Total Casos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="okCases">0</div>
+                <div class="stat-label">Casos OK</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="noCases">0</div>
+                <div class="stat-label">Casos NO</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="successRate">0%</div>
+                <div class="stat-label">Tasa de Éxito</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="table-container">
+                <table id="testCasesTable">
+                    <thead>
+                        <tr>
+                            <th class="col-ciclo">Ciclo</th>
+                            <th class="col-escenario">N° Escenario</th>
+                            <th class="col-descripcion">Descripción</th>
+                            <th id="varsThPlaceholder"></th> <!-- Aquí se insertan las variables dinámicas -->
+                            <th class="col-resultado-esperado">Resultado Esperado</th>
+                            <th class="col-resultado-obtenido">Resultado Obtenido</th>
+                            <th class="col-fecha-ejecucion">Fecha Ejecución</th>
+                            <th class="col-observaciones">Observaciones</th>
+                            <th class="col-error">N° Error/Bug</th>
+                            <th class="col-tester">Tester</th>
+                            <th class="col-tiempo">Tiempo (min)</th>
+                            <th class="col-evidencias">Evidencias</th>
+                            <th class="col-acciones">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="testCasesBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📋</div>
+                <h3>No hay casos de prueba</h3>
+                <p>Comienza agregando tu primer caso de prueba haciendo clic en "Nuevo Caso"</p>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Configurar Variables -->
+    <div id="configVarsModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Configurar Variables de Entrada</h2>
+                <span class="close" id="closeConfigVarsBtn">&times;</span>
+            </div>
+            <form id="configVarsForm">
+                <div id="varsList"></div>
+                <div style="margin-top:15px;">
+                    <button type="button" class="btn btn-info btn-small" id="btnAddVarName">+ Agregar Variable</button>
+                </div>
+                <div class="controls" style="margin-top:20px;">
+                    <button type="submit" class="btn btn-success">💾 Guardar Configuración</button>
+                    <button type="button" class="btn" id="btnCancelConfigVars">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar caso -->
+    <div id="testCaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nuevo Caso de Prueba</h2>
+                <span class="close" id="closeModalBtn">&times;</span>
+            </div>
+            <form id="testCaseForm">
+                <div class="form-group">
+                    <label>Ciclo:</label>
+                    <input type="text" id="cycleNumber" required>
+                </div>
+                <div class="form-group">
+                    <label>N° Escenario:</label>
+                    <input type="text" id="scenarioNumber" required>
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Variables de Entrada:</label>
+                    <div id="fixedVariablesContainer"></div>
+                </div>
+                <div class="form-group">
+                    <label>Resultado Esperado:</label>
+                    <textarea id="obtainedResult"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Resultado Obtenido:</label>
+                    <select id="status">
+                        <option value="">Pendiente</option>
+                        <option value="OK">OK</option>
+                        <option value="NO">NO</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Ejecución:</label>
+                    <input type="date" id="executionDate">
+                </div>
+                <div class="form-group">
+                    <label>Observaciones:</label>
+                    <textarea id="observations"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>N° Error/Bug:</label>
+                    <input type="text" id="errorNumber">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Tester:</label>
+                    <input type="text" id="tester" required>
+                </div>
+
+
+
+                <div class="form-group">
+                    <label>Evidencias (Imágenes):</label>
+                    <div class="evidence-container">
+                        <input type="file" id="evidenceInput" accept="image/*" multiple>
+                        <div id="evidenceContainer"></div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button type="submit" class="btn btn-success" id="saveButton">💾 Guardar Caso</button>
+                    <button type="button" class="btn" id="btnCancelModal">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para visualizar evidencias -->
+    <div id="evidenceViewModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
+            <div class="modal-header">
+                <h2>📸 Evidencias del Caso</h2>
+                <span class="close" id="closeEvidenceModalBtn">&times;</span>
+            </div>
+            <div id="evidenceViewContainer"
+                style="text-align: center; overflow-y: auto; max-height: calc(90vh - 100px);">
+                <!-- Las imágenes se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para imagen ampliada -->
+    <div id="imageZoomModal" class="modal" style="display:none; z-index: 10001;">
+        <span class="close" id="closeImageZoomBtn"
+            style="position:absolute;top:20px;right:40px;font-size:40px;cursor:pointer;color:white;">&times;</span>
+        <img id="zoomedImage"
+            style="display:block;max-width:90vw;max-height:90vh;margin:60px auto 0 auto;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);" />
+    </div>
+    <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
+</body>
+
+</html>
