@@ -1233,3 +1233,148 @@ body.dark-mode tr:hover .checkbox-column {
 body.dark-mode .checkbox-column input[type="checkbox"]:focus {
     outline-color: #8b5cf6;
 }
+
+/* ===============================================
+   CSS PARA OCULTAR FILAS - SOLO AGREGAR AL FINAL
+   =============================================== */
+
+/* Toggle para mostrar casos ocultos */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-label {
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    font-weight: normal;
+}
+
+#showHiddenToggle {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #f59e0b;
+}
+
+/* Tarjeta de estadísticas para casos ocultos */
+.stat-card-hidden {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    transition: all 0.3s ease;
+}
+
+.stat-card-hidden:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+}
+
+.stat-card-hidden .stat-number {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card-hidden .stat-label {
+    opacity: 0.95;
+}
+
+/* Botón Ocultar en el toolbar */
+.bulk-actions .btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    color: white;
+    border: none;
+}
+
+.bulk-actions .btn-warning:hover {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Casos ocultos cuando se muestran con el toggle */
+.row-hidden {
+    opacity: 0.6;
+    background: rgba(156, 163, 175, 0.1) !important;
+    border-left: 4px solid #9ca3af !important;
+}
+
+.row-hidden::before {
+    content: "🔒";
+    position: absolute;
+    left: 50px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Modo oscuro - Toggle */
+body.dark-mode #showHiddenToggle {
+    accent-color: #fbbf24;
+    filter: brightness(1.2);
+}
+
+body.dark-mode .toggle-label {
+    color: #d1d5db;
+}
+
+/* Modo oscuro - Tarjeta de casos ocultos */
+body.dark-mode .stat-card-hidden {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9)) !important;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+body.dark-mode .stat-card-hidden:hover {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9)) !important;
+    box-shadow: 0 12px 40px rgba(245, 158, 11, 0.5);
+}
+
+/* Modo oscuro - Botón Ocultar */
+body.dark-mode .bulk-actions .btn-warning {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+body.dark-mode .bulk-actions .btn-warning:hover {
+    background: linear-gradient(135deg, #fde047, #fbbf24);
+    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.5);
+}
+
+/* Modo oscuro - Casos ocultos */
+body.dark-mode .row-hidden {
+    opacity: 0.5;
+    background: rgba(75, 85, 99, 0.3) !important;
+    border-left-color: #6b7280 !important;
+}
+
+/* Responsive - Toggle */
+@media (max-width: 768px) {
+    .toggle-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .toggle-label {
+        font-size: 13px;
+    }
+}
+
+/* Transiciones suaves */
+.stat-card-hidden,
+.row-hidden,
+.bulk-actions .btn-warning {
+    transition: all 0.3s ease;
+}
+
+/* Focus states para accesibilidad */
+#showHiddenToggle:focus {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
+}
+
+body.dark-mode #showHiddenToggle:focus {
+    outline-color: #fbbf24;
+}

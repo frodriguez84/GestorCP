@@ -1598,3 +1598,180 @@ window.clearSelection = function () {
     updateBulkToolbar();
     renderTestCases();
 }
+
+// ===============================================
+// FUNCIONALIDAD OCULTAR FILAS - SOLO ADITIVA
+// ===============================================
+
+// Función para ocultar casos seleccionados
+window.hideBulkCases = function () {
+    const selectedCount = selectedCases.size;
+    if (selectedCount === 0) return;
+
+    const message = `👁️‍🗨️ ¿Deseas ocultar ${selectedCount} caso${selectedCount > 1 ? 's' : ''} seleccionado${selectedCount > 1 ? 's' : ''}?\n\nLos casos ocultos no aparecerán en la vista principal pero se mantendrán guardados.\nPodrás mostrarlos nuevamente desde los filtros.`;
+
+    if (!confirm(message)) return;
+
+    // Marcar casos seleccionados como ocultos
+    testCases.forEach(tc => {
+        if (selectedCases.has(tc.id)) {
+            tc.hidden = true; // NUEVA propiedad - no rompe nada existente
+        }
+    });
+
+    // Limpiar selección
+    selectedCases.clear();
+
+    // Actualizar interfaz (usar funciones existentes)
+    saveToStorage();
+    applyFilters(); // Usar función existente que ya maneja filteredCases
+    updateStats(); // Función existente
+    updateBulkToolbar(); // Función existente
+
+    alert(`✅ ${selectedCount} caso${selectedCount > 1 ? 's' : ''} ocultado${selectedCount > 1 ? 's' : ''} correctamente\n\n💡 Usa el filtro "Mostrar ocultos" para verlos nuevamente`);
+}
+
+// Función para mostrar/ocultar casos ocultos (toggle)
+window.toggleShowHidden = function () {
+    // Aplicar filtros existentes (que ahora incluirán la lógica de ocultos)
+    applyFilters();
+}
+
+// Función para obtener contador de casos ocultos
+function getHiddenCasesCount() {
+    return testCases.filter(tc => tc.hidden === true).length;
+}
+
+// Función para mostrar todos los casos ocultos
+window.showAllHiddenCases = function () {
+    const hiddenCount = getHiddenCasesCount();
+    if (hiddenCount === 0) {
+        alert('No hay casos ocultos para mostrar');
+        return;
+    }
+
+    const message = `👁️ ¿Deseas mostrar todos los ${hiddenCount} casos ocultos?\n\nVolverán a aparecer en la lista principal.`;
+
+    if (!confirm(message)) return;
+
+    // Quitar marca de oculto a todos los casos
+    testCases.forEach(tc => {
+        if (tc.hidden === true) {
+            tc.hidden = false;
+        }
+    });
+
+    // Actualizar interfaz
+    saveToStorage();
+    applyFilters();
+    updateStats();
+
+    alert(`✅ ${hiddenCount} casos mostrados correctamente`);
+}
+
+// EXTENSIÓN de la función updateStats existente - NO reemplazar, solo agregar al final
+function updateStatsWithHidden() {
+    // Llamar a la función updateStats original primero
+    updateStats();
+
+    // Agregar contador de ocultos
+    const hiddenCount = getHiddenCasesCount();
+    let hiddenStatsElement = document.getElementById('hiddenCases');
+
+    if (hiddenCount > 0) {
+        if (!hiddenStatsElement) {
+            // Crear nueva tarjeta de stats para casos ocultos
+            const statsContainer = document.getElementById('statsContainer');
+            const hiddenCard = document.createElement('div');
+            hiddenCard.className = 'stat-card stat-card-hidden';
+            hiddenCard.id = 'hiddenCasesCard';
+            hiddenCard.innerHTML = `
+                <div class="stat-number" id="hiddenCases">${hiddenCount}</div>
+                <div class="stat-label">Casos Ocultos</div>
+            `;
+            hiddenCard.onclick = showAllHiddenCases;
+            hiddenCard.style.cursor = 'pointer';
+            hiddenCard.title = 'Click para mostrar todos los casos ocultos';
+            statsContainer.appendChild(hiddenCard);
+        } else {
+            hiddenStatsElement.textContent = hiddenCount;
+        }
+    } else {
+        // Remover tarjeta si no hay casos ocultos
+        const hiddenCard = document.getElementById('hiddenCasesCard');
+        if (hiddenCard) {
+            hiddenCard.remove();
+        }
+    }
+}
+
+// EXTENSIÓN de la función applyFilters existente - NO reemplazar
+// Esta función debe agregarse AL FINAL de tu función applyFilters existente
+function applyFiltersWithHidden() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const testerFilter = document.getElementById('testerFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const dateFrom = document.getElementById('dateFromFilter').value;
+    const dateTo = document.getElementById('dateToFilter').value;
+
+    // NUEVA lógica para casos ocultos
+    const showHidden = document.getElementById('showHiddenToggle') ?
+        document.getElementById('showHiddenToggle').checked : false;
+
+    filteredCases = testCases.filter(testCase => {
+        // NUEVA condición: filtrar ocultos a menos que esté activado el toggle
+        if (!showHidden && testCase.hidden === true) {
+            return false;
+        }
+
+        // Resto de filtros existentes (MANTENER SIN CAMBIOS)
+        const matchesSearch = !search ||
+            (testCase.description && testCase.description.toLowerCase().includes(search)) ||
+            (testCase.tester && testCase.tester.toLowerCase().includes(search)) ||
+            (testCase.scenarioNumber && testCase.scenarioNumber.toLowerCase().includes(search)) ||
+            (testCase.observations && testCase.observations.toLowerCase().includes(search));
+
+        const matchesTester = !testerFilter || testCase.tester === testerFilter;
+        const matchesStatus = !statusFilter ||
+            (statusFilter === "Pendiente" ? (!testCase.status || testCase.status === "") : testCase.status === statusFilter);
+
+        let matchesDateRange = true;
+        if (dateFrom || dateTo) {
+            const testDate = testCase.executionDate ? new Date(testCase.executionDate) : null;
+            if (testDate) {
+                if (dateFrom) {
+                    matchesDateRange = matchesDateRange && testDate >= new Date(dateFrom);
+                }
+                if (dateTo) {
+                    matchesDateRange = matchesDateRange && testDate <= new Date(dateTo + 'T23:59:59');
+                }
+            }
+        }
+
+        return matchesSearch && matchesTester && matchesStatus && matchesDateRange;
+    });
+
+    renderTestCases();
+    updateStatsWithHidden(); // Usar la nueva función que incluye ocultos
+}
+
+// REEMPLAZAR tu función applyFilters existente con esta versión extendida
+window.applyFilters = applyFiltersWithHidden;
+
+// Inicialización adicional para casos existentes (migración segura)
+function initializeHiddenFunctionality() {
+    // Asegurar que casos existentes tengan la propiedad hidden
+    testCases.forEach(tc => {
+        if (tc.hidden === undefined) {
+            tc.hidden = false; // Por defecto NO oculto
+        }
+    });
+
+    // Actualizar stats con la nueva funcionalidad
+    updateStatsWithHidden();
+}
+
+// Llamar inicialización cuando cargue la página
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(initializeHiddenFunctionality, 1000); // Después de que todo se cargue
+});

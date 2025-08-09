@@ -60,6 +60,13 @@
                     <label>📅 Hasta:</label>
                     <input type="date" id="dateToFilter">
                 </div>
+                <div class="filter-group">
+                    <label>👁️ Mostrar:</label>
+                    <div class="toggle-container">
+                        <input type="checkbox" id="showHiddenToggle" onchange="toggleShowHidden()">
+                        <label for="showHiddenToggle" class="toggle-label">Incluir casos ocultos</label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -70,6 +77,9 @@
                     <span id="selectedCounter">0 casos seleccionados</span>
                 </div>
                 <div class="bulk-actions">
+                    <button class="btn btn-warning" onclick="hideBulkCases()" title="Ocultar casos seleccionados">
+                        👁️‍🗨️ Ocultar Seleccionados
+                    </button>
                     <button class="btn btn-danger" onclick="deleteBulkCases()" title="Eliminar casos seleccionados">
                         🗑️ Eliminar Seleccionados
                     </button>
