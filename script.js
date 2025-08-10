@@ -2388,3 +2388,6 @@ function highlightUpdatedCases(caseIds) {
         }
     });
 }
+
+
+

@@ -172,15 +172,16 @@ td.col-escenario {
 /* Descripción */
 th.col-descripcion,
 td.col-descripcion {
-    min-width: 300px;
-    max-width: 400px;
+    min-width: 600px;
+    max-width: 1000px;
+    
 }
 
 /* Resultado Esperado */
 th.col-resultado-esperado,
 td.col-resultado-esperado {
-    min-width: 300px;
-    max-width: 400px;
+    min-width: 600px;
+    max-width: 1000px;
 }
 
 /* Resultado Obtenido */
@@ -2154,3 +2155,26 @@ body.dark-mode .case-recently-updated {
     }
 }
 
+/* RESETEAR TODO PARA STICKY */
+* {
+    transform: none !important; /* Quitar transforms que rompen sticky */
+}
+
+.table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#testCasesTable th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+th{
+    text-align: center !important;
+    position: absolute !important;
+    margin-top: 0 !important;
+    position: relative !important;
+    position: fixed !important;
+}

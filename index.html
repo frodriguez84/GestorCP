@@ -197,15 +197,15 @@
         <div class="stats" id="statsContainer">
             <div class="stat-card">
                 <div class="stat-number" id="totalCases">0</div>
-                <div class="stat-label">Total Casos</div>
+                <div class="stat-label">Total Escenarios</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="okCases">0</div>
-                <div class="stat-label">Casos OK</div>
+                <div class="stat-label">Escenarios OK</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="noCases">0</div>
-                <div class="stat-label">Casos NO</div>
+                <div class="stat-label">Escenarios NO</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="successRate">0%</div>
@@ -217,7 +217,7 @@
             <div class="table-container">
                 <table id="testCasesTable">
                     <thead>
-                        <tr class="pepe">
+                        <tr>
                             <th class="col-ciclo">Ciclo</th>
                             <th class="col-escenario">N° Escenario</th>
                             <th class="col-descripcion">Descripción</th>
@@ -240,7 +240,7 @@
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.5;">📋</div>
                 <h3>No hay casos de prueba</h3>
-                <p>Comienza agregando tu primer caso de prueba haciendo clic en "Nuevo Caso"</p>
+                <p>Comienza agregando tu primer escenario de prueba haciendo clic en "Nuevo Escenario"</p>
             </div>
         </div>
     </div>
@@ -268,7 +268,7 @@
     <div id="testCaseModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">Nuevo Caso de Prueba</h2>
+                <h2 id="modalTitle">📋 Nuevo Escenario de Prueba</h2>
                 <span class="close" id="closeModalBtn">&times;</span>
             </div>
             <form id="testCaseForm">
@@ -408,7 +408,7 @@
     <div id="evidenceViewModal" class="modal">
         <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
             <div class="modal-header">
-                <h2>📸 Evidencias del Caso</h2>
+                <h2>📸 Evidencias del Escenario</h2>
                 <span class="close" id="closeEvidenceModalBtn">&times;</span>
             </div>
             <div id="evidenceViewContainer"
