@@ -821,7 +821,7 @@ window.loadTestCases = function () {
                 try {
                     const data = JSON.parse(e.target.result);
                     if (Array.isArray(data)) {
-                        if (confirm('¿Deseas reemplazar todos los casos actuales o agregar los nuevos?\n\nOK = Reemplazar\nCancelar = Agregar')) {
+                        if (confirm('¿Deseas reemplazar todos los escenarios actuales o agregar los nuevos?\n\nAceptar = Reemplazar\nCancelar = Agregar')) {
                             testCases = data;
                         } else {
                             // Agregar nuevos casos con IDs únicos
@@ -835,7 +835,7 @@ window.loadTestCases = function () {
                         renderTestCases();
                         updateStats();
                         updateFilters();
-                        alert('Casos de prueba cargados exitosamente');
+                        alert('Escenarios cargados exitosamente');
                     } else {
                         alert('Formato de archivo inválido');
                     }
@@ -848,48 +848,6 @@ window.loadTestCases = function () {
     };
     input.click();
 }
-
-/*window.exportToExcel = function () {
-    // Crear datos para exportar
-    const headers = [
-        'N° Escenario', 'Descripción', 'Variables Entrada',
-        'Resultado Esperado', 'Resultado Obtenido', 'Fecha Ejecución', 'Observaciones',
-        'N° Error/Bug', 'Tester', 'Tiempo (min)', 'Evidencias'
-    ];
-
-    const rows = filteredCases.map(tc => [
-        tc.scenarioNumber || '',
-        tc.description || '',
-        tc.inputVariables && Array.isArray(tc.inputVariables) && tc.inputVariables.length > 0 ?
-            tc.inputVariables.map(v => `${v.name}: ${v.value}`).join('; ') :
-            'Sin variables',
-        tc.obtainedResult || '',
-        tc.status || '',
-        tc.executionDate ? new Date(tc.executionDate).toLocaleString() : '',
-        tc.observations || '',
-        tc.errorNumber || '',
-        tc.tester || '',
-        tc.testTime || 0,
-        tc.steps ? tc.steps.map(s => `${s.number}. ${s.description}`).join('; ') : '',
-        tc.evidence ? `${tc.evidence.length} archivos` : 'Sin evidencias'
-    ]);
-
-    // Crear CSV
-    const csvContent = [headers, ...rows]
-        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-        .join('\n');
-
-    // Descargar
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `casos_prueba_export_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}*/
 
 async function exportToExcel() {
     // Crear un nuevo libro de trabajo
@@ -1057,7 +1015,7 @@ async function exportToExcel() {
 }
 
 window.clearAllData = function () {
-    if (confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los casos de prueba?\n\nEsta acción no se puede deshacer.')) {
+    if (confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los escenarios de prueba?\n\nEsta acción no se puede deshacer.')) {
         if (confirm('🚨 CONFIRMACIÓN FINAL: Se eliminarán todos los datos. ¿Continuar?')) {
             testCases = [];
             filteredCases = [];
@@ -1240,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateStats();
             updateFilters();
             closeModal();
-            alert('✅ Caso duplicado y reordenado correctamente');
+            alert('✅ Escenario duplicado y reordenado correctamente');
             return;
         }
         // ====== FIN LÓGICA DE DUPLICACIÓN ======
@@ -1332,7 +1290,86 @@ document.addEventListener('DOMContentLoaded', function () {
             closeModal();
         }
     });
+    // Event listeners para edición masiva
+    const closeBulkEditBtn = document.getElementById('closeBulkEditBtn');
+    if (closeBulkEditBtn) {
+        closeBulkEditBtn.addEventListener('click', closeBulkEditModal);
+    }
 
+    const btnCancelBulkEdit = document.getElementById('btnCancelBulkEdit');
+    if (btnCancelBulkEdit) {
+        btnCancelBulkEdit.addEventListener('click', closeBulkEditModal);
+    }
+
+    // Manejar envío del formulario de edición masiva
+    const bulkEditForm = document.getElementById('bulkEditForm');
+    if (bulkEditForm) {
+        bulkEditForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const selectedCount = selectedCases.size;
+            if (selectedCount === 0) {
+                alert('❌ No hay casos seleccionados');
+                closeBulkEditModal();
+                return;
+            }
+
+            // Recopilar datos del formulario
+            const formData = {
+                description: document.getElementById('bulkDescription').value,
+                obtainedResult: document.getElementById('bulkExpectedResult').value,
+                status: document.getElementById('bulkStatus').value,
+                executionDate: document.getElementById('bulkExecutionDate').value,
+                observations: document.getElementById('bulkObservations').value,
+                errorNumber: document.getElementById('bulkErrorNumber').value,
+                tester: document.getElementById('bulkTester').value,
+                variables: {}
+            };
+
+            // Recopilar variables
+            inputVariableNames.forEach(varName => {
+                const input = document.querySelector(`input[name="bulk_var_${varName}"]`);
+                if (input) {
+                    formData.variables[varName] = input.value;
+                }
+            });
+
+            // Verificar que al menos un campo tenga contenido
+            const hasAnyContent =
+                formData.description.trim() ||
+                formData.obtainedResult.trim() ||
+                formData.status ||
+                formData.executionDate ||
+                formData.observations.trim() ||
+                formData.errorNumber.trim() ||
+                formData.tester.trim() ||
+                Object.values(formData.variables).some(v => v && v.trim());
+
+            if (!hasAnyContent) {
+                alert('⚠️ Debes completar al menos un campo para aplicar cambios.\n\nLos campos vacíos no modificarán los casos existentes.');
+                return;
+            }
+
+            // Confirmar acción
+            const confirmMessage = `📝 ¿Confirmas aplicar los cambios a ${selectedCount} escenarios seleccionados?\n\n` +
+                `⚠️ Esta acción no se puede deshacer.\n` +
+                `💡 Solo se modificarán los campos que completaste.`;
+
+            if (confirm(confirmMessage)) {
+                applyBulkEdit(formData);
+            }
+        });
+    }
+
+    // Cerrar modal al hacer clic fuera
+    const bulkEditModal = document.getElementById('bulkEditModal');
+    if (bulkEditModal) {
+        bulkEditModal.addEventListener('click', function (e) {
+            if (e.target === bulkEditModal) {
+                closeBulkEditModal();
+            }
+        });
+    }
     // Auto-guardar cada 30 segundos
     setInterval(saveToStorage, 30000);
 });
@@ -1562,6 +1599,17 @@ function updateBulkToolbar() {
     if (selectedCount > 0) {
         toolbar.style.display = 'flex';
         counter.textContent = `${selectedCount} caso${selectedCount > 1 ? 's' : ''} seleccionado${selectedCount > 1 ? 's' : ''}`;
+
+        // 🔧 MEJORAR: Mostrar/ocultar botón de editar según cantidad
+        const editButton = toolbar.querySelector('button[onclick="openBulkEditModal()"]');
+        if (editButton) {
+            if (selectedCount >= 2) {
+                editButton.style.display = 'inline-flex';
+                editButton.title = `Editar campos comunes de ${selectedCount} casos seleccionados`;
+            } else {
+                editButton.style.display = 'none'; // Ocultar para 1 solo caso
+            }
+        }
     } else {
         toolbar.style.display = 'none';
     }
@@ -1590,7 +1638,7 @@ window.deleteBulkCases = function () {
         summaryText += `\nCiclo ${cycle}: Escenarios ${scenarios.join(', ')}`;
     });
 
-    const message = `⚠️ ¿Estás seguro de que deseas eliminar ${selectedCount} caso${selectedCount > 1 ? 's' : ''}?${summaryText}\n\n📌 IMPORTANTE: Solo se renumerarán los escenarios del Ciclo 1.\nLos ciclos 2+ mantendrán sus números originales.\n\nEsta acción no se puede deshacer.`;
+    const message = `⚠️ ¿Estás seguro de que deseas eliminar ${selectedCount} escenarios${selectedCount > 1 ? 's' : ''}?${summaryText}\n\n📌 IMPORTANTE: Solo se renumerarán los escenarios del Ciclo 1.\nLos ciclos 2+ mantendrán sus números originales.\n\nEsta acción no se puede deshacer.`;
 
     if (!confirm(message)) return;
 
@@ -1610,7 +1658,7 @@ window.deleteBulkCases = function () {
     updateFilters();
     updateBulkToolbar();
 
-    alert(`✅ ${selectedCount} caso${selectedCount > 1 ? 's' : ''} eliminado${selectedCount > 1 ? 's' : ''} correctamente\n\n🔢 Ciclo 1 renumerado secuencialmente\n📌 Ciclos 2+ mantuvieron sus números originales`);
+    alert(`✅ ${selectedCount} escenario${selectedCount > 1 ? 's' : ''} eliminado${selectedCount > 1 ? 's' : ''} correctamente\n\n🔢 Ciclo 1 renumerado secuencialmente\n📌 Ciclos 2+ mantuvieron sus números originales`);
 }
 
 // Función para deseleccionar todos los casos
@@ -1630,7 +1678,7 @@ window.hideBulkCases = function () {
     const selectedCount = selectedCases.size;
     if (selectedCount === 0) return;
 
-    const message = `👁️‍🗨️ ¿Deseas ocultar ${selectedCount} caso${selectedCount > 1 ? 's' : ''} seleccionado${selectedCount > 1 ? 's' : ''}?\n\nLos casos ocultos no aparecerán en la vista principal pero se mantendrán guardados.\nPodrás mostrarlos nuevamente desde los filtros.`;
+    const message = `👁️‍🗨️ ¿Deseas ocultar ${selectedCount} escenario${selectedCount > 1 ? 's' : ''} seleccionado${selectedCount > 1 ? 's' : ''}?\n\nLos escenarios ocultos no aparecerán en la vista principal pero se mantendrán guardados.\nPodrás mostrarlos nuevamente desde los filtros.`;
 
     if (!confirm(message)) return;
 
@@ -1650,7 +1698,7 @@ window.hideBulkCases = function () {
     updateStats(); // Función existente
     updateBulkToolbar(); // Función existente
 
-    alert(`✅ ${selectedCount} caso${selectedCount > 1 ? 's' : ''} ocultado${selectedCount > 1 ? 's' : ''} correctamente\n\n💡 Usa el filtro "Mostrar ocultos" para verlos nuevamente`);
+    alert(`✅ ${selectedCount} escenario${selectedCount > 1 ? 's' : ''} ocultado${selectedCount > 1 ? 's' : ''} correctamente\n\n💡 Usa el filtro "Mostrar ocultos" para verlos nuevamente`);
 }
 
 // Función para mostrar/ocultar casos ocultos (toggle)
@@ -1668,11 +1716,11 @@ function getHiddenCasesCount() {
 window.showAllHiddenCases = function () {
     const hiddenCount = getHiddenCasesCount();
     if (hiddenCount === 0) {
-        alert('No hay casos ocultos para mostrar');
+        alert('No hay escenarios ocultos para mostrar');
         return;
     }
 
-    const message = `👁️ ¿Deseas mostrar todos los ${hiddenCount} casos ocultos?\n\nVolverán a aparecer en la lista principal.`;
+    const message = `👁️ ¿Deseas mostrar todos los ${hiddenCount} escenarios ocultos?\n\nVolverán a aparecer en la lista principal.`;
 
     if (!confirm(message)) return;
 
@@ -1688,7 +1736,7 @@ window.showAllHiddenCases = function () {
     applyFilters();
     updateStats();
 
-    alert(`✅ ${hiddenCount} casos mostrados correctamente`);
+    alert(`✅ ${hiddenCount} escenarios mostrados correctamente`);
 }
 
 // EXTENSIÓN de la función updateStats existente - NO reemplazar, solo agregar al final
@@ -1713,7 +1761,7 @@ function updateStatsWithHidden() {
             `;
             hiddenCard.onclick = showAllHiddenCases;
             hiddenCard.style.cursor = 'pointer';
-            hiddenCard.title = 'Click para mostrar todos los casos ocultos';
+            hiddenCard.title = 'Click para mostrar todos los escenarios ocultos';
             statsContainer.appendChild(hiddenCard);
         } else {
             hiddenStatsElement.textContent = hiddenCount;
@@ -1825,7 +1873,7 @@ let requirementInfo = {
     number: '',
     name: '',
     description: '',
-    version: '',
+    caso: '',
     tester: '',
     startDate: ''
 };
@@ -1842,7 +1890,7 @@ function loadRequirementInfo() {
                 number: '',
                 name: '',
                 description: '',
-                version: '',
+                caso: '',
                 tester: '',
                 startDate: ''
             };
@@ -1877,8 +1925,10 @@ function updateRequirementDisplay() {
         updateFieldDisplay('displayReqNumber', requirementInfo.number);
         updateFieldDisplay('displayReqName', requirementInfo.name);
         updateFieldDisplay('displayReqDescription', requirementInfo.description);
-        updateFieldDisplay('displayReqVersion', requirementInfo.version);
+        updateFieldDisplay('displayReqVersion', requirementInfo.caso);
         updateFieldDisplay('displayReqTester', requirementInfo.tester);
+
+        // USAR LA FUNCIÓN CORREGIDA para la fecha
         updateFieldDisplay('displayReqStartDate', formatDisplayDate(requirementInfo.startDate));
 
     } else {
@@ -1916,15 +1966,65 @@ function formatDisplayDate(dateString) {
     if (!dateString) return '';
 
     try {
-        const date = new Date(dateString);
+        // 🔧 MÉTODO 1: Dividir la fecha y crear con componentes locales
+        if (dateString.includes('-') && dateString.length === 10) {
+            // Formato "YYYY-MM-DD" del input type="date"
+            const [year, month, day] = dateString.split('-').map(Number);
+
+            // Crear fecha local (el mes va de 0-11, por eso restamos 1)
+            const date = new Date(year, month - 1, day);
+
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        // 🔧 MÉTODO 2: Para otros formatos, usar interpretación local
+        const date = new Date(dateString.replace(/-/g, '/'));
+
         return date.toLocaleDateString('es-ES', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         });
+
     } catch (e) {
+        console.error('Error al formatear fecha:', e);
         return dateString; // Retornar original si hay error
     }
+}
+
+// Función para convertir fecha de input a Date object LOCAL
+function parseLocalDate(dateString) {
+    if (!dateString) return null;
+
+    try {
+        if (dateString.includes('-') && dateString.length === 10) {
+            // Input format: "YYYY-MM-DD"
+            const [year, month, day] = dateString.split('-').map(Number);
+            return new Date(year, month - 1, day); // Local date
+        }
+
+        // Otros formatos - usar reemplazo de guiones
+        return new Date(dateString.replace(/-/g, '/'));
+
+    } catch (e) {
+        console.error('Error parsing date:', e);
+        return null;
+    }
+}
+
+// Función para convertir Date object a formato input (YYYY-MM-DD)
+function formatDateForInput(date) {
+    if (!date || !(date instanceof Date) || isNaN(date)) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 // Abrir modal de edición
@@ -1933,7 +2033,7 @@ window.openRequirementModal = function () {
     document.getElementById('reqNumber').value = requirementInfo.number || '';
     document.getElementById('reqName').value = requirementInfo.name || '';
     document.getElementById('reqDescription').value = requirementInfo.description || '';
-    document.getElementById('reqVersion').value = requirementInfo.version || '';
+    document.getElementById('reqVersion').value = requirementInfo.caso || '';
     document.getElementById('reqTester').value = requirementInfo.tester || '';
     document.getElementById('reqStartDate').value = requirementInfo.startDate || '';
 
@@ -1958,7 +2058,7 @@ window.clearRequirementInfo = function () {
             number: '',
             name: '',
             description: '',
-            version: '',
+            caso: '',
             tester: '',
             startDate: ''
         };
@@ -2000,7 +2100,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 number: number,
                 name: name,
                 description: document.getElementById('reqDescription').value.trim(),
-                version: document.getElementById('reqVersion').value.trim(),
+                caso: document.getElementById('reqVersion').value.trim(),
                 tester: document.getElementById('reqTester').value.trim(),
                 startDate: document.getElementById('reqStartDate').value
             };
@@ -2073,4 +2173,218 @@ const originalOpenModal = window.openRequirementModal;
 window.openRequirementModal = function () {
     originalOpenModal();
     suggestTesterFromCases();
+}
+
+// Función para abrir el modal de edición masiva
+window.openBulkEditModal = function () {
+    const selectedCount = selectedCases.size;
+
+    if (selectedCount === 0) {
+        alert('❌ No hay escenarios seleccionados para editar');
+        return;
+    }
+
+    if (selectedCount < 2) {
+        alert('💡 Para editar un solo escenario, usa el botón "Editar" individual.\nEsta función es para editar múltiples escenarios a la vez.');
+        return;
+    }
+
+    // Actualizar título del modal
+    document.getElementById('bulkEditCount').textContent = selectedCount;
+
+    // Limpiar formulario
+    document.getElementById('bulkEditForm').reset();
+
+    // Renderizar variables dinámicas
+    renderBulkVariablesInputs();
+
+    // Mostrar modal
+    document.getElementById('bulkEditModal').style.display = 'block';
+
+    // Focus en primer campo
+    setTimeout(() => {
+        document.getElementById('bulkDescription').focus();
+    }, 100);
+
+    console.log(`📝 Modal de edición masiva abierto para ${selectedCount} casos`);
+};
+
+// Función para cerrar el modal de edición masiva
+window.closeBulkEditModal = function () {
+    document.getElementById('bulkEditModal').style.display = 'none';
+};
+
+// Función para renderizar inputs de variables en edición masiva
+function renderBulkVariablesInputs() {
+    const container = document.getElementById('bulkVariablesContainer');
+
+    if (inputVariableNames.length === 0) {
+        container.innerHTML = '<p class="no-variables-message">No hay variables configuradas</p>';
+        return;
+    }
+
+    container.innerHTML = inputVariableNames.map(varName => `
+        <div class="step-item">
+            <label style="min-width:120px;">${varName}:</label>
+            <input type="text" name="bulk_var_${varName}" placeholder="Dejar vacío para no cambiar" style="flex:1;">
+        </div>
+    `).join('');
+}
+
+// Función principal para aplicar edición masiva
+window.applyBulkEdit = function (formData) {
+    const selectedArray = Array.from(selectedCases);
+    let updatedCount = 0;
+    const changes = {};
+    const updatedCaseIds = [];
+
+    // Determinar qué campos cambiar (solo los no vacíos)
+    if (formData.description.trim()) {
+        changes.description = formData.description.trim();
+    }
+
+    if (formData.obtainedResult.trim()) {
+        changes.obtainedResult = formData.obtainedResult.trim();
+    }
+
+    if (formData.status) {
+        changes.status = formData.status;
+
+        // Auto-asignar fecha si el status es OK o NO y no hay fecha
+        if (formData.status === 'OK' || formData.status === 'NO') {
+            if (!formData.executionDate) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                changes.executionDate = `${yyyy}-${mm}-${dd}`;
+            }
+        }
+    }
+
+    if (formData.executionDate) {
+        changes.executionDate = formData.executionDate;
+    }
+
+    if (formData.observations.trim()) {
+        changes.observations = formData.observations.trim();
+    }
+
+    if (formData.errorNumber.trim()) {
+        changes.errorNumber = formData.errorNumber.trim();
+    }
+
+    if (formData.tester.trim()) {
+        changes.tester = formData.tester.trim();
+    }
+
+    // Variables de entrada
+    const variableChanges = {};
+    inputVariableNames.forEach(varName => {
+        const value = formData.variables[varName];
+        if (value && value.trim()) {
+            variableChanges[varName] = value.trim();
+        }
+    });
+
+    // Aplicar cambios a cada caso seleccionado
+    selectedArray.forEach(caseId => {
+        const testCase = testCases.find(tc => tc.id === caseId);
+        if (!testCase) return;
+
+        let hasChanges = false;
+
+        // Aplicar cambios de campos simples
+        Object.keys(changes).forEach(field => {
+            if (testCase[field] !== changes[field]) {
+                testCase[field] = changes[field];
+                hasChanges = true;
+            }
+        });
+
+        // Aplicar cambios de variables
+        if (Object.keys(variableChanges).length > 0) {
+            if (!testCase.inputVariables) {
+                testCase.inputVariables = [];
+            }
+
+            Object.keys(variableChanges).forEach(varName => {
+                const existingVar = testCase.inputVariables.find(v => v.name === varName);
+                if (existingVar) {
+                    if (existingVar.value !== variableChanges[varName]) {
+                        existingVar.value = variableChanges[varName];
+                        hasChanges = true;
+                    }
+                } else {
+                    testCase.inputVariables.push({
+                        name: varName,
+                        value: variableChanges[varName]
+                    });
+                    hasChanges = true;
+                }
+            });
+        }
+
+        if (hasChanges) {
+            updatedCount++;
+            updatedCaseIds.push(caseId);
+        }
+    });
+
+    // Guardar cambios y actualizar interfaz
+    saveToStorage();
+    renderTestCases();
+    updateStats();
+    closeBulkEditModal();
+
+    // HIGHLIGHT: Resaltar casos actualizados
+    if (updatedCaseIds.length > 0) {
+        setTimeout(() => {
+            highlightUpdatedCases(updatedCaseIds);
+        }, 100);
+    }
+
+    // Crear resumen de cambios
+    const changesSummary = [];
+    if (changes.description) changesSummary.push('✏️ Descripción');
+    if (changes.obtainedResult) changesSummary.push('🎯 Resultado Esperado');
+    if (changes.status) changesSummary.push(`📊 Estado → ${changes.status}`);
+    if (changes.executionDate) changesSummary.push('📅 Fecha de Ejecución');
+    if (changes.observations) changesSummary.push('📝 Observaciones');
+    if (changes.errorNumber) changesSummary.push('🐛 N° Error/Bug');
+    if (changes.tester) changesSummary.push(`👤 Tester → ${changes.tester}`);
+    if (Object.keys(variableChanges).length > 0) {
+        changesSummary.push(`🔧 Variables: ${Object.keys(variableChanges).join(', ')}`);
+    }
+
+    // Mostrar resultado
+    if (updatedCount > 0) {
+        alert(`✅ Edición masiva completada exitosamente\n\n` +
+            `📊 ${updatedCount} de ${selectedArray.length} escenarios actualizados\n\n` +
+            `🔧 Campos modificados:\n${changesSummary.join('\n')}\n\n` +
+            `💡 Los casos actualizados están resaltados temporalmente.`);
+    } else {
+        alert('ℹ️ No se realizaron cambios.\nTodos los campos estaban vacíos o los valores eran idénticos.');
+    }
+
+    console.log(`📝 Edición masiva completada: ${updatedCount}/${selectedArray.length} escenarios actualizados`);
+};
+
+// ===============================================
+// FUNCIÓN ADICIONAL: Marcar casos actualizados visualmente
+// ===============================================
+
+function highlightUpdatedCases(caseIds) {
+    // Agregar clase de animación a casos actualizados
+    caseIds.forEach(caseId => {
+        const row = document.querySelector(`tr[data-case-id="${caseId}"]`);
+        if (row) {
+            row.classList.add('case-recently-updated');
+
+            // Remover la clase después de la animación
+            setTimeout(() => {
+                row.classList.remove('case-recently-updated');
+            }, 2000);
+        }
+    });
 }

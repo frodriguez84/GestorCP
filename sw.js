@@ -2,156 +2,205 @@
 // SERVICE WORKER - CASOS DE PRUEBA PWA
 // ===============================================
 
-// CAMBIAR SOLO CUANDO HAGAS CAMBIOS IMPORTANTES (nuevas funcionalidades principales)
-const CACHE_NAME = 'test-cases-pwa-v3.0.0';
+// VERSIÓN AUTOMÁTICA basada en timestamp
+const CACHE_NAME = `test-cases-pwa-${Date.now()}`;
 
-// MODO DE DESARROLLO - Cambiar a true durante desarrollo activo
-const DEVELOPMENT_MODE = true; // ← Cambiar a false para producción
+// MODO DE DESARROLLO - Cambiar a false para producción
+const DEVELOPMENT_MODE = true;
 
-const urlsToCache = [
+// LISTA DE ARCHIVOS PRINCIPALES (para verificar cambios)
+const CORE_FILES = [
   '/',
   '/index.html',
   '/styles.css', 
   '/script.js',
-  '/manifest.json',
-  // CDNs externos que usa tu app
+  '/manifest.json'
+];
+
+// URLs externas (cachear normalmente)
+const EXTERNAL_URLS = [
   'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
-// 🚀 INSTALACIÓN - Cache archivos importantes
+// 🚀 INSTALACIÓN
 self.addEventListener('install', event => {
-  console.log(`🔧 PWA v3.0.0: Service Worker instalándose... (Modo: ${DEVELOPMENT_MODE ? 'Desarrollo' : 'Producción'})`);
+  console.log(`🔧 PWA Auto-Update: Instalando... (Modo: ${DEVELOPMENT_MODE ? 'Desarrollo' : 'Producción'})`);
   
   if (DEVELOPMENT_MODE) {
-    // En desarrollo: Activar inmediatamente sin cachear mucho
+    // En desarrollo: Activar inmediatamente, cache mínimo
+    console.log('🔄 Modo desarrollo: Activación inmediata');
     self.skipWaiting();
     return;
   }
   
-  // En producción: Cachear todo
+  // En producción: Cache completo
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('📦 PWA v3.0.0: Archivos agregados al cache');
-        return cache.addAll(urlsToCache);
+        console.log('📦 Cacheando archivos...');
+        return cache.addAll([...CORE_FILES, ...EXTERNAL_URLS]);
       })
-      .then(() => {
-        return self.skipWaiting();
-      })
+      .then(() => self.skipWaiting())
   );
 });
 
-// 🔄 ACTIVACIÓN
+// 🔄 ACTIVACIÓN - Limpiar caches antiguos
 self.addEventListener('activate', event => {
-  console.log('✅ PWA v3.0.0: Service Worker activándose...');
+  console.log('✅ PWA Auto-Update: Activando...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('🗑️ PWA: Eliminando cache antiguo:', cacheName);
+            console.log('🗑️ Eliminando cache antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// 📡 FETCH - Estrategia diferente según modo
+// 📡 FETCH - Estrategia inteligente
 self.addEventListener('fetch', event => {
-  // Solo manejar requests GET
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
-  // Ignorar requests externos problemáticos
+  // Ignorar extensiones y URLs problemáticas
   if (event.request.url.includes('chrome-extension://') || 
       event.request.url.includes('moz-extension://') ||
       event.request.url.includes('kaspersky-labs.com')) {
     return;
   }
 
-  // MODO DESARROLLO: Siempre red primero para archivos principales
-  if (DEVELOPMENT_MODE) {
-    if (event.request.url.includes('index.html') || 
-        event.request.url.includes('styles.css') ||
-        event.request.url.includes('script.js') ||
-        event.request.url.includes('manifest.json')) {
-      
-      event.respondWith(
-        fetch(event.request).then(fetchResponse => {
-          console.log('🔄 DEV: Siempre desde red:', event.request.url);
-          return fetchResponse;
-        }).catch(() => {
-          console.log('📦 DEV: Fallback a cache:', event.request.url);
+  const url = new URL(event.request.url);
+  const isLocalFile = url.origin === self.location.origin;
+  const isCoreFile = CORE_FILES.some(file => 
+    url.pathname === file || url.pathname.endsWith(file)
+  );
+
+  // 🔥 MODO DESARROLLO: Core files SIEMPRE desde red
+  if (DEVELOPMENT_MODE && isLocalFile && isCoreFile) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          console.log(`🌐 DEV: ${url.pathname} desde red`);
+          return response;
+        })
+        .catch(() => {
+          console.log(`📦 DEV: ${url.pathname} fallback a cache`);
           return caches.match(event.request);
         })
-      );
-      return;
-    }
+    );
+    return;
   }
 
-  // MODO PRODUCCIÓN O ARCHIVOS SECUNDARIOS: Cache first
+  // 📦 MODO PRODUCCIÓN O ARCHIVOS EXTERNOS: Cache first
   event.respondWith(
     caches.match(event.request)
       .then(response => {
         if (response) {
-          console.log('📦 PWA: Desde cache:', event.request.url);
+          console.log(`📦 Cache: ${url.pathname}`);
           return response;
         }
 
-        console.log('🌐 PWA: Desde red:', event.request.url);
-        return fetch(event.request).then(fetchResponse => {
-          if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
+        return fetch(event.request)
+          .then(fetchResponse => {
+            console.log(`🌐 Red: ${url.pathname}`);
+            
+            // Cachear respuesta válida
+            if (fetchResponse && fetchResponse.status === 200 && fetchResponse.type === 'basic') {
+              const responseToCache = fetchResponse.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => cache.put(event.request, responseToCache));
+            }
+
             return fetchResponse;
-          }
-
-          const responseToCache = fetchResponse.clone();
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
+          })
+          .catch(() => {
+            if (event.request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+            return new Response('Recurso no disponible offline', {
+              status: 503,
+              statusText: 'Service Unavailable'
             });
-
-          return fetchResponse;
-        }).catch(() => {
-          if (event.request.destination === 'document') {
-            return caches.match('/index.html');
-          }
-          
-          return new Response('Recurso no disponible offline', {
-            status: 503,
-            statusText: 'Service Unavailable'
           });
-        });
       })
   );
 });
 
-// 💬 MENSAJES desde la app principal
+// 💬 MENSAJES
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('🔄 PWA: Forzando actualización...');
+  if (event.data?.type === 'SKIP_WAITING') {
+    console.log('🔄 Forzando actualización...');
     self.skipWaiting();
   }
   
-  if (event.data && event.data.type === 'GET_VERSION') {
+  if (event.data?.type === 'GET_VERSION') {
     event.ports[0].postMessage({
       type: 'VERSION',
       version: CACHE_NAME,
-      mode: DEVELOPMENT_MODE ? 'desarrollo' : 'producción'
+      mode: DEVELOPMENT_MODE ? 'desarrollo' : 'producción',
+      timestamp: Date.now()
     });
   }
 });
 
-// 🎯 MANEJO de errores
+// 🎯 ERRORES
 self.addEventListener('error', event => {
-  console.error('❌ PWA: Error en Service Worker:', event.error);
+  console.error('❌ Error en Service Worker:', event.error);
 });
 
-// 📊 LOG de instalación exitosa
-console.log(`🚀 PWA v3.0.0: Service Worker cargado - Modo ${DEVELOPMENT_MODE ? 'DESARROLLO' : 'PRODUCCIÓN'} - ${CACHE_NAME}`);
+// 🕐 AUTO-UPDATE: Verificar cambios periódicamente EN DESARROLLO
+if (DEVELOPMENT_MODE) {
+  // Verificar cambios cada 3 segundos en desarrollo
+  setInterval(async () => {
+    try {
+      const clients = await self.clients.matchAll();
+      if (clients.length === 0) return; // No hay clientes activos
+
+      // Verificar si hay cambios en archivos principales
+      const hasChanges = await checkForUpdates();
+      if (hasChanges) {
+        console.log('🆕 Cambios detectados, notificando clientes...');
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'UPDATE_AVAILABLE',
+            timestamp: Date.now()
+          });
+        });
+      }
+    } catch (error) {
+      console.log('🔄 Error verificando actualizaciones:', error);
+    }
+  }, 3000);
+}
+
+// Función para detectar cambios
+async function checkForUpdates() {
+  try {
+    for (const file of CORE_FILES) {
+      const cache = await caches.open(CACHE_NAME);
+      const cachedResponse = await cache.match(file);
+      
+      if (!cachedResponse) continue;
+      
+      const networkResponse = await fetch(file, { cache: 'no-cache' });
+      const cachedText = await cachedResponse.text();
+      const networkText = await networkResponse.text();
+      
+      if (cachedText !== networkText) {
+        console.log(`🔄 Archivo modificado: ${file}`);
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.log('❌ Error detectando cambios:', error);
+    return false;
+  }
+}
+
+console.log(`🚀 PWA Auto-Update cargado - ${DEVELOPMENT_MODE ? 'DESARROLLO' : 'PRODUCCIÓN'} - ${CACHE_NAME}`);

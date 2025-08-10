@@ -678,12 +678,12 @@ body.dark-mode .btn-warning:hover {
 }
 
 body.dark-mode .btn-info {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    background: linear-gradient(135deg, #128195, #137188);
     box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
 }
 
 body.dark-mode .btn-info:hover {
-    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+    box-shadow: 0 8px 25px rgba(105, 6, 212, 0.4);
     background: linear-gradient(135deg, #22d3ee, #06b6d4);
 }
 
@@ -1284,7 +1284,7 @@ body.dark-mode .checkbox-column input[type="checkbox"]:focus {
 .bulk-actions .btn-warning {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-    color: white;
+    color: black;
     border: none;
 }
 
@@ -1335,11 +1335,13 @@ body.dark-mode .stat-card-hidden:hover {
 body.dark-mode .bulk-actions .btn-warning {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
     box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+    color: black;
 }
 
 body.dark-mode .bulk-actions .btn-warning:hover {
     background: linear-gradient(135deg, #fde047, #fbbf24);
     box-shadow: 0 6px 16px rgba(251, 191, 36, 0.5);
+    
 }
 
 /* Modo oscuro - Casos ocultos */
@@ -1718,8 +1720,8 @@ body.dark-mode th:hover {
     transform: translateY(-1px);
 }
 
-/* Efecto de brillo sutil en headers */
-body.dark-mode th::before {
+/* Efecto de brillo sutil en headers  -- EFECTO DE LAS COLUMNAS */
+/* body.dark-mode th::before {
     content: '';
     position: absolute;
     top: 0;
@@ -1732,7 +1734,7 @@ body.dark-mode th::before {
 
 body.dark-mode th:hover::before {
     left: 100%;
-}
+} */
 
 /* MODO OSCURO - SECCIÓN DE FILTROS CON ESTILO VIOLETA */
 body.dark-mode .filters {
@@ -1857,3 +1859,298 @@ body.dark-mode .filters:hover,
 body.dark-mode .requirement-card:hover {
     animation: none;
 }
+
+/* BOTÓN VERDE PRINCIPAL - Compatible con ambos modos */
+.btn-success-bright {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    color: #ffffff !important;
+    border: 2px solid rgba(34, 197, 94, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3) !important;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-success-bright:hover {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4) !important;
+    border-color: rgba(34, 197, 94, 0.5) !important;
+    transform: translateY(-2px);
+    color: #ffffff !important;
+}
+
+/* Modo oscuro - Botón verde más vibrante */
+body.dark-mode .btn-success-bright {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode .btn-success-bright:hover {
+    background: linear-gradient(135deg, #34d399, #10b981) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    color: #ffffff !important;
+}
+
+/* MODAL DE EDICIÓN MASIVA */
+#bulkEditModal .modal-content {
+    max-width: 700px;
+    max-height: 90vh;
+}
+
+/* Información del bulk edit */
+.bulk-edit-info {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1));
+    border: 2px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.bulk-edit-info p {
+    margin: 5px 0;
+    color: #000000;
+    font-weight: 600;
+}
+
+.bulk-edit-hint {
+    font-size: 0.9em;
+    opacity: 0.8;
+    font-style: italic;
+}
+
+/* Modo oscuro - Info del bulk edit */
+body.dark-mode .bulk-edit-info {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+body.dark-mode .bulk-edit-info p {
+    color: #ffffff;
+}
+
+/* Variables en bulk edit */
+#bulkVariablesContainer {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    background: rgba(34, 197, 94, 0.02);
+}
+
+#bulkVariablesContainer .step-item {
+    margin-bottom: 12px;
+    padding: 8px;
+    background: rgba(34, 197, 94, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+.no-variables-message {
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Modo oscuro - Variables */
+body.dark-mode #bulkVariablesContainer {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+body.dark-mode #bulkVariablesContainer .step-item {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+body.dark-mode .no-variables-message {
+    color: #9ca3af;
+}
+
+/* Placeholders mejorados */
+#bulkEditModal input::placeholder,
+#bulkEditModal textarea::placeholder {
+    color: #000000;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+body.dark-mode #bulkEditModal input::placeholder,
+body.dark-mode #bulkEditModal textarea::placeholder {
+    color: #34d399;
+    opacity: 0.8;
+}
+
+/* Select en bulk edit */
+#bulkStatus {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(16, 185, 129, 0.05));
+    border: 2px solid rgba(34, 197, 94, 0.2);
+}
+
+#bulkStatus:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+body.dark-mode #bulkStatus {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #e4e6ea;
+}
+
+body.dark-mode #bulkStatus:focus {
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* Inputs y textareas en bulk edit */
+#bulkEditModal .form-group input,
+#bulkEditModal .form-group textarea {
+    border: 2px solid rgba(34, 197, 94, 0.2);
+    transition: all 0.3s ease;
+}
+
+#bulkEditModal .form-group input:focus,
+#bulkEditModal .form-group textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background: rgba(34, 197, 94, 0.02);
+}
+
+body.dark-mode #bulkEditModal .form-group input,
+body.dark-mode #bulkEditModal .form-group textarea {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+body.dark-mode #bulkEditModal .form-group input:focus,
+body.dark-mode #bulkEditModal .form-group textarea:focus {
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+/* Labels mejorados */
+#bulkEditModal .form-group label {
+    color: #000000;
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+body.dark-mode #bulkEditModal .form-group label {
+    color: white;
+}
+
+/* Animación de entrada del modal */
+#bulkEditModal.modal {
+    animation: bulkModalFadeIn 0.3s ease-out;
+}
+
+@keyframes bulkModalFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(5px);
+    }
+}
+
+#bulkEditModal .modal-content {
+    animation: bulkModalSlideIn 0.3s ease-out;
+}
+
+@keyframes bulkModalSlideIn {
+    from {
+        transform: translateY(-30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Efecto de brillo en el botón EDITAR SELECCIONADOS */
+.btn-success-bright::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+    border-radius: inherit;
+}
+
+.btn-success-bright:hover::before {
+    left: 100%;
+}
+
+.btn-success-bright {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Responsive para el modal de bulk edit */
+@media (max-width: 768px) {
+    #bulkEditModal .modal-content {
+        margin: 5% auto;
+        padding: 15px;
+        max-width: 95%;
+    }
+    
+    .bulk-edit-info {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .bulk-edit-info p {
+        font-size: 0.9em;
+    }
+    
+    #bulkVariablesContainer .step-item {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    #bulkVariablesContainer .step-item label {
+        min-width: auto;
+    }
+}
+
+/* Estados especiales para mostrar cambios aplicados */
+.case-recently-updated {
+    animation: caseUpdated 2s ease-out;
+}
+
+@keyframes caseUpdated {
+    0% {
+        background-color: rgba(34, 197, 94, 0.3) !important;
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+
+body.dark-mode .case-recently-updated {
+    animation: caseUpdatedDark 2s ease-out;
+}
+
+@keyframes caseUpdatedDark {
+    0% {
+        background-color: rgba(16, 185, 129, 0.4) !important;
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+

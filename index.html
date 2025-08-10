@@ -22,10 +22,10 @@
         <div class="header">
             <h1>📋 Casos de Prueba</h1>
             <div class="controls">
-                <button class="btn btn-info" id="btnConfigVars">⚙️ Configurar Variables</button>
-                <button class="btn btn-success" id="btnAddCase">➕ Nuevo Caso</button>
-                <button class="btn btn-info" id="btnLoadCases">📂 Cargar Casos</button>
-                <button class="btn btn-warning" id="btnSaveCases">💾 Guardar Casos</button>
+                <button class="btn btn-success" id="btnAddCase">➕ Nuevo Escenario</button>
+                <button class="btn btn-info" id="btnLoadCases">📂 Cargar Escenarios</button>
+                <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
+                <button class="btn btn-warning" id="btnSaveCases">💾 Guardar Escenarios</button>
                 <button class="btn btn-info" id="btnExportExcel">📊 Exportar Excel</button>
                 <button class="btn btn-danger" id="btnClearAll">🗑️ Limpiar Todo</button>
             </div>
@@ -63,7 +63,7 @@
                     </div>
                     <div class="requirement-meta">
                         <div class="requirement-item">
-                            <span class="requirement-label">Versión:</span>
+                            <span class="requirement-label">N° Caso:</span>
                             <span class="requirement-value" id="displayReqVersion">-</span>
                         </div>
                         <div class="requirement-item">
@@ -105,7 +105,7 @@
 
                     <div class="form-row">
                         <div class="form-group form-group-half">
-                            <label>Versión:</label>
+                            <label>N° Caso:</label>
                             <input type="text" id="reqVersion" placeholder="Ej: v2.1.0">
                         </div>
 
@@ -177,6 +177,10 @@
                     <span id="selectedCounter">0 casos seleccionados</span>
                 </div>
                 <div class="bulk-actions">
+                    <button class="btn btn-success-bright" onclick="openBulkEditModal()"
+                        title="Editar campos comunes de casos seleccionados">
+                        📝 Editar Seleccionados
+                    </button>
                     <button class="btn btn-warning" onclick="hideBulkCases()" title="Ocultar casos seleccionados">
                         👁️‍🗨️ Ocultar Seleccionados
                     </button>
@@ -213,7 +217,7 @@
             <div class="table-container">
                 <table id="testCasesTable">
                     <thead>
-                        <tr>
+                        <tr class="pepe">
                             <th class="col-ciclo">Ciclo</th>
                             <th class="col-escenario">N° Escenario</th>
                             <th class="col-descripcion">Descripción</th>
@@ -331,6 +335,75 @@
         </div>
     </div>
 
+    <!-- Modal para edición masiva -->
+    <div id="bulkEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="bulkEditModalTitle">📝 Editar Escenarios Seleccionados</h2>
+                <span class="close" id="closeBulkEditBtn">&times;</span>
+            </div>
+
+            <div class="bulk-edit-info">
+                <p><strong>🔢 <span id="bulkEditCount">0</span> casos seleccionados</strong></p>
+                <p class="bulk-edit-hint">💡 Solo se actualizarán los campos que completes. Los campos vacíos no se
+                    modificarán.</p>
+            </div>
+
+            <form id="bulkEditForm">
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="bulkDescription" placeholder="Dejar vacío para no cambiar"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Variables de Entrada:</label>
+                    <div id="bulkVariablesContainer"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Resultado Esperado:</label>
+                    <textarea id="bulkExpectedResult" placeholder="Dejar vacío para no cambiar"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Resultado Obtenido:</label>
+                    <select id="bulkStatus">
+                        <option value="">-- No cambiar --</option>
+                        <option value="OK">OK</option>
+                        <option value="NO">NO</option>
+                        <option value="Pendiente">Pendiente</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha de Ejecución:</label>
+                    <input type="date" id="bulkExecutionDate" title="Dejar vacío para no cambiar">
+                </div>
+
+                <div class="form-group">
+                    <label>Observaciones:</label>
+                    <textarea id="bulkObservations" placeholder="Dejar vacío para no cambiar"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>N° Error/Bug:</label>
+                    <input type="text" id="bulkErrorNumber" placeholder="Dejar vacío para no cambiar">
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre del Tester:</label>
+                    <input type="text" id="bulkTester" placeholder="Dejar vacío para no cambiar">
+                </div>
+
+                <div class="controls">
+                    <button type="submit" class="btn btn-success-bright">💾 Aplicar Cambios</button>
+                    <button type="button" class="btn" id="btnCancelBulkEdit">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
     <!-- Modal para visualizar evidencias -->
     <div id="evidenceViewModal" class="modal">
         <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
@@ -367,37 +440,127 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then(registration => {
-                        console.log('✅ PWA: Service Worker registrado exitosamente');
+                        console.log('✅ PWA Auto-Update: Service Worker registrado');
 
-                        // Verificar actualizaciones cada 30 minutos
-                        setInterval(() => {
-                            registration.update();
-                        }, 30 * 60 * 1000);
+                        // 🔄 ESCUCHAR MENSAJES del Service Worker
+                        navigator.serviceWorker.addEventListener('message', event => {
+                            if (event.data?.type === 'UPDATE_AVAILABLE') {
+                                console.log('🆕 Actualización detectada automáticamente');
 
-                        // Escuchar por actualizaciones
+                                // Mostrar notificación de actualización
+                                showUpdateNotification();
+
+                                // Auto-aplicar en 2 segundos (modo desarrollo)
+                                setTimeout(() => {
+                                    console.log('🔄 Aplicando actualización automática...');
+                                    window.location.reload();
+                                }, 2000);
+                            }
+                        });
+
+                        // Detectar actualizaciones tradicionales del SW
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            console.log('🆕 Nueva versión del Service Worker detectada');
+
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Nueva versión disponible
-                                    if (confirm('🆕 Nueva versión disponible. ¿Recargar la aplicación?')) {
+                                    showUpdateNotification();
+
+                                    // Auto-actualizar después de 2 segundos
+                                    setTimeout(() => {
                                         newWorker.postMessage({ type: 'SKIP_WAITING' });
                                         window.location.reload();
-                                    }
+                                    }, 2000);
                                 }
                             });
                         });
                     })
                     .catch(error => {
-                        console.log('❌ PWA: Error registrando Service Worker:', error);
+                        console.log('❌ Error registrando Service Worker:', error);
                     });
             });
 
-            // Recargar cuando el nuevo service worker tome control
+            // Recargar cuando el SW tome control
             navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('🔄 Service Worker actualizado, recargando...');
                 window.location.reload();
             });
         }
+
+        // 🔔 Función para mostrar notificación de actualización
+        function showUpdateNotification() {
+            // Crear notificación visual
+            const notification = document.createElement('div');
+            notification.id = 'updateNotification';
+            notification.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+            z-index: 10000;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+        ">
+            🔄 Actualizando aplicación...
+        </div>
+        <style>
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        </style>
+    `;
+
+            document.body.appendChild(notification);
+
+            // Remover después de 3 segundos
+            setTimeout(() => {
+                if (document.getElementById('updateNotification')) {
+                    document.getElementById('updateNotification').remove();
+                }
+            }, 3000);
+
+            console.log('🔔 Notificación de actualización mostrada');
+        }
+
+        // 🛠️ OPCIONAL: Botón manual para forzar actualización (para desarrollo)
+        document.addEventListener('DOMContentLoaded', function () {
+            // Solo agregar botón en modo desarrollo
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            if (isDev) {
+                const devButton = document.createElement('button');
+                devButton.className = 'btn btn-info btn-small';
+                devButton.innerHTML = '🔄 Forzar Update';
+                devButton.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-size: 12px;
+            padding: 8px 12px;
+        `;
+
+                devButton.onclick = async function () {
+                    console.log('🔄 Forzando actualización manual...');
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        await registration.unregister();
+                        window.location.reload();
+                    }
+                };
+
+                document.body.appendChild(devButton);
+                console.log('🛠️ Botón de desarrollo agregado');
+            }
+        });
     </script>
 </body>
 
