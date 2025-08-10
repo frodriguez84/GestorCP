@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casos de Prueba</title>
+    <link rel="manifest" href="manifest.json">
     <div class="theme-switch">
         <label class="switch">
             <input type="checkbox" id="themeToggle">
@@ -261,6 +262,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
+    <script>
+        // 🚀 REGISTRO DEL SERVICE WORKER
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('✅ PWA: Service Worker registrado exitosamente');
+
+                        // Verificar actualizaciones cada 30 minutos
+                        setInterval(() => {
+                            registration.update();
+                        }, 30 * 60 * 1000);
+
+                        // Escuchar por actualizaciones
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Nueva versión disponible
+                                    if (confirm('🆕 Nueva versión disponible. ¿Recargar la aplicación?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.log('❌ PWA: Error registrando Service Worker:', error);
+                    });
+            });
+
+            // Recargar cuando el nuevo service worker tome control
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+    </script>
 </body>
 
 </html>
