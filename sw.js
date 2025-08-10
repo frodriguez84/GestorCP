@@ -2,7 +2,12 @@
 // SERVICE WORKER - CASOS DE PRUEBA PWA
 // ===============================================
 
-const CACHE_NAME = 'test-cases-pwa-v2.0.0'; // ← CAMBIÉ VERSIÓN PARA FORZAR LIMPIEZA
+// CAMBIAR SOLO CUANDO HAGAS CAMBIOS IMPORTANTES (nuevas funcionalidades principales)
+const CACHE_NAME = 'test-cases-pwa-v3.0.0';
+
+// MODO DE DESARROLLO - Cambiar a true durante desarrollo activo
+const DEVELOPMENT_MODE = true; // ← Cambiar a false para producción
+
 const urlsToCache = [
   '/',
   '/index.html',
@@ -16,30 +21,35 @@ const urlsToCache = [
 
 // 🚀 INSTALACIÓN - Cache archivos importantes
 self.addEventListener('install', event => {
-  console.log('🔧 PWA v2.0.0: Service Worker instalándose...');
+  console.log(`🔧 PWA v3.0.0: Service Worker instalándose... (Modo: ${DEVELOPMENT_MODE ? 'Desarrollo' : 'Producción'})`);
   
+  if (DEVELOPMENT_MODE) {
+    // En desarrollo: Activar inmediatamente sin cachear mucho
+    self.skipWaiting();
+    return;
+  }
+  
+  // En producción: Cachear todo
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('📦 PWA v2.0.0: Archivos agregados al cache');
+        console.log('📦 PWA v3.0.0: Archivos agregados al cache');
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        // Activar inmediatamente el nuevo service worker
         return self.skipWaiting();
       })
   );
 });
 
-// 🔄 ACTIVACIÓN - Limpiar caches antiguos AGRESIVAMENTE
+// 🔄 ACTIVACIÓN
 self.addEventListener('activate', event => {
-  console.log('✅ PWA v2.0.0: Service Worker activándose...');
+  console.log('✅ PWA v3.0.0: Service Worker activándose...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Eliminar TODOS los caches antiguos
           if (cacheName !== CACHE_NAME) {
             console.log('🗑️ PWA: Eliminando cache antiguo:', cacheName);
             return caches.delete(cacheName);
@@ -47,69 +57,61 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-      // Tomar control de todas las pestañas inmediatamente
       return self.clients.claim();
     })
   );
 });
 
-// 📡 FETCH - Estrategia Network First para manifest.json, Cache First para resto
+// 📡 FETCH - Estrategia diferente según modo
 self.addEventListener('fetch', event => {
   // Solo manejar requests GET
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Ignorar requests a APIs externas no cacheables
+  // Ignorar requests externos problemáticos
   if (event.request.url.includes('chrome-extension://') || 
       event.request.url.includes('moz-extension://') ||
       event.request.url.includes('kaspersky-labs.com')) {
     return;
   }
 
-  // ESTRATEGIA ESPECIAL PARA MANIFEST.JSON - siempre buscar versión fresca
-  if (event.request.url.includes('manifest.json')) {
-    event.respondWith(
-      fetch(event.request).then(fetchResponse => {
-        console.log('🌐 PWA: Manifest.json actualizado desde red');
-        // Actualizar cache con nueva versión
-        const responseToCache = fetchResponse.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(event.request, responseToCache);
-          });
-        return fetchResponse;
-      }).catch(() => {
-        console.log('📦 PWA: Usando manifest.json desde cache (sin red)');
-        return caches.match(event.request);
-      })
-    );
-    return;
+  // MODO DESARROLLO: Siempre red primero para archivos principales
+  if (DEVELOPMENT_MODE) {
+    if (event.request.url.includes('index.html') || 
+        event.request.url.includes('styles.css') ||
+        event.request.url.includes('script.js') ||
+        event.request.url.includes('manifest.json')) {
+      
+      event.respondWith(
+        fetch(event.request).then(fetchResponse => {
+          console.log('🔄 DEV: Siempre desde red:', event.request.url);
+          return fetchResponse;
+        }).catch(() => {
+          console.log('📦 DEV: Fallback a cache:', event.request.url);
+          return caches.match(event.request);
+        })
+      );
+      return;
+    }
   }
 
-  // Para el resto de archivos, estrategia Cache First normal
+  // MODO PRODUCCIÓN O ARCHIVOS SECUNDARIOS: Cache first
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // ✅ CACHE HIT: Devolver desde cache
         if (response) {
-          console.log('📦 PWA: Sirviendo desde cache:', event.request.url);
+          console.log('📦 PWA: Desde cache:', event.request.url);
           return response;
         }
 
-        // ❌ CACHE MISS: Buscar en red
-        console.log('🌐 PWA: Buscando en red:', event.request.url);
-        
+        console.log('🌐 PWA: Desde red:', event.request.url);
         return fetch(event.request).then(fetchResponse => {
-          // Verificar si es una respuesta válida
           if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
             return fetchResponse;
           }
 
-          // Clonar respuesta (solo se puede leer una vez)
           const responseToCache = fetchResponse.clone();
-
-          // Agregar al cache para próximas veces
           caches.open(CACHE_NAME)
             .then(cache => {
               cache.put(event.request, responseToCache);
@@ -117,12 +119,10 @@ self.addEventListener('fetch', event => {
 
           return fetchResponse;
         }).catch(() => {
-          // 🚫 SIN RED: Si es HTML, devolver página offline
           if (event.request.destination === 'document') {
             return caches.match('/index.html');
           }
           
-          // Para otros recursos, simplemente fallar
           return new Response('Recurso no disponible offline', {
             status: 503,
             statusText: 'Service Unavailable'
@@ -142,14 +142,10 @@ self.addEventListener('message', event => {
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0].postMessage({
       type: 'VERSION',
-      version: CACHE_NAME
+      version: CACHE_NAME,
+      mode: DEVELOPMENT_MODE ? 'desarrollo' : 'producción'
     });
   }
-});
-
-// 📱 NOTIFICACIÓN de actualización disponible
-self.addEventListener('updatefound', () => {
-  console.log('🆕 PWA: Nueva versión disponible');
 });
 
 // 🎯 MANEJO de errores
@@ -158,4 +154,4 @@ self.addEventListener('error', event => {
 });
 
 // 📊 LOG de instalación exitosa
-console.log('🚀 PWA v2.0.0: Service Worker cargado correctamente - ' + CACHE_NAME);
+console.log(`🚀 PWA v3.0.0: Service Worker cargado - Modo ${DEVELOPMENT_MODE ? 'DESARROLLO' : 'PRODUCCIÓN'} - ${CACHE_NAME}`);

@@ -33,6 +33,105 @@
 
         </div>
 
+        <!-- Información del Requerimiento -->
+        <div class="requirement-info" id="requirementInfo">
+            <div class="requirement-card">
+                <div class="requirement-header">
+                    <div class="requirement-title">
+                        <h3 id="requirementDisplayTitle">Información del Requerimiento</h3>
+                        <span class="requirement-subtitle" id="requirementDisplaySubtitle">Click en editar para
+                            configurar</span>
+                    </div>
+                    <button class="btn btn-info btn-small requirement-edit-btn" onclick="openRequirementModal()"
+                        title="Editar información del requerimiento">
+                        ✏️ Editar
+                    </button>
+                </div>
+
+                <div class="requirement-details" id="requirementDetails">
+                    <div class="requirement-item">
+                        <span class="requirement-label">N° Requerimiento:</span>
+                        <span class="requirement-value" id="displayReqNumber">-</span>
+                    </div>
+                    <div class="requirement-item">
+                        <span class="requirement-label">Nombre:</span>
+                        <span class="requirement-value" id="displayReqName">-</span>
+                    </div>
+                    <div class="requirement-item requirement-description">
+                        <span class="requirement-label">Descripción:</span>
+                        <span class="requirement-value" id="displayReqDescription">-</span>
+                    </div>
+                    <div class="requirement-meta">
+                        <div class="requirement-item">
+                            <span class="requirement-label">Versión:</span>
+                            <span class="requirement-value" id="displayReqVersion">-</span>
+                        </div>
+                        <div class="requirement-item">
+                            <span class="requirement-label">Tester Principal:</span>
+                            <span class="requirement-value" id="displayReqTester">-</span>
+                        </div>
+                        <div class="requirement-item">
+                            <span class="requirement-label">Fecha Inicio:</span>
+                            <span class="requirement-value" id="displayReqStartDate">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para editar información del requerimiento -->
+        <div id="requirementModal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>📋 Información del Requerimiento</h2>
+                    <span class="close" id="closeRequirementModalBtn">&times;</span>
+                </div>
+                <form id="requirementForm">
+                    <div class="form-group">
+                        <label>N° Requerimiento: *</label>
+                        <input type="text" id="reqNumber" placeholder="Ej: REQ-2024-001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nombre del Requerimiento: *</label>
+                        <input type="text" id="reqName" placeholder="Ej: Sistema de Login con 2FA" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <textarea id="reqDescription" rows="3"
+                            placeholder="Descripción detallada del requerimiento o funcionalidad a testear"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group form-group-half">
+                            <label>Versión:</label>
+                            <input type="text" id="reqVersion" placeholder="Ej: v2.1.0">
+                        </div>
+
+                        <div class="form-group form-group-half">
+                            <label>Tester Principal:</label>
+                            <input type="text" id="reqTester" placeholder="Nombre del tester responsable">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha de Inicio de Testing:</label>
+                        <input type="date" id="reqStartDate">
+                    </div>
+
+                    <div class="controls">
+                        <button type="submit" class="btn btn-success">💾 Guardar Información</button>
+                        <button type="button" class="btn" onclick="closeRequirementModal()">❌ Cancelar</button>
+                        <button type="button" class="btn btn-danger" onclick="clearRequirementInfo()"
+                            style="margin-left: auto;">
+                            🗑️ Limpiar Todo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="filters">
             <div class="filter-row">
                 <div class="filter-group">

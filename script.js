@@ -95,6 +95,7 @@ window.updateStatusAndDate = function (id, value) {
     const testCase = testCases.find(tc => tc.id === id);
     if (testCase) {
         testCase.status = value;
+
         // Si no hay fecha y el status es OK o NO, poner la fecha de hoy
         if (!testCase.executionDate && (value === 'OK' || value === 'NO')) {
             const today = new Date();
@@ -103,8 +104,21 @@ window.updateStatusAndDate = function (id, value) {
             const dd = String(today.getDate()).padStart(2, '0');
             testCase.executionDate = `${dd}-${mm}-${yyyy}`;
         }
+
+        // Actualización inmediata de estadísticas
         saveToStorage();
-        renderTestCases();
+
+        // Actualizar estadísticas inmediatamente (función existente)
+        if (typeof updateStatsWithHidden === 'function') {
+            updateStatsWithHidden(); // Si tienes casos ocultos
+        } else {
+            updateStats(); // Función básica
+        }
+
+        // Actualizar filtros si es necesario (para mantener consistency)
+        applyFilters();
+
+        console.log(`✅ Estado actualizado: Escenario ${testCase.scenarioNumber} → ${value}`);
     }
 }
 
@@ -201,8 +215,15 @@ window.updateManualTime = function (id, value) {
     const testCase = testCases.find(tc => tc.id === id);
     if (testCase) {
         testCase.testTime = Math.max(0, Math.trunc(Number(value)) || 0);
+
+        // ACTUALIZACIÓN INMEDIATA
         saveToStorage();
+
+        // No necesita updateStats porque el tiempo no afecta las estadísticas principales
+        // Pero sí necesita re-renderizar para mantener consistency
         renderTestCases();
+
+        console.log(`⏱️ Tiempo actualizado: Escenario ${testCase.scenarioNumber} → ${testCase.testTime} min`);
     }
 }
 
@@ -583,7 +604,8 @@ window.renderTestCases = function () {
 
     tbody.innerHTML = filteredCases.map(testCase => {
         const statusClass = testCase.status === 'OK' ? 'status-ok' :
-            testCase.status === 'NO' ? 'status-no' : '';
+            testCase.status === 'NO' ? 'status-no' :
+                (!testCase.status || testCase.status === '' || testCase.status === 'Pendiente') ? 'status-pending' : '';
 
         const evidenceCount = testCase.evidence ? testCase.evidence.length : 0;
         const isSelected = selectedCases.has(testCase.id);
@@ -1775,3 +1797,280 @@ function initializeHiddenFunctionality() {
 document.addEventListener('DOMContentLoaded', function () {
     setTimeout(initializeHiddenFunctionality, 1000); // Después de que todo se cargue
 });
+
+//BORRAR SI SE ACTUALIZA TODO BIEN
+window.debugStats = function () {
+    const total = filteredCases.length;
+    const okCases = filteredCases.filter(tc => tc.status === 'OK').length;
+    const noCases = filteredCases.filter(tc => tc.status === 'NO').length;
+    const pendingCases = filteredCases.filter(tc => !tc.status || tc.status === '').length;
+
+    console.log('📊 Estadísticas actuales:', {
+        total: total,
+        ok: okCases,
+        no: noCases,
+        pending: pendingCases,
+        successRate: total > 0 ? Math.round((okCases / total) * 100) : 0
+    });
+
+    return { total, okCases, noCases, pendingCases };
+}
+
+// ===============================================
+// FUNCIONALIDAD INFORMACIÓN DEL REQUERIMIENTO
+// ===============================================
+
+// Variable global para almacenar información del requerimiento
+let requirementInfo = {
+    number: '',
+    name: '',
+    description: '',
+    version: '',
+    tester: '',
+    startDate: ''
+};
+
+// Cargar información del requerimiento desde localStorage
+function loadRequirementInfo() {
+    const saved = localStorage.getItem('requirementInfo');
+    if (saved) {
+        try {
+            requirementInfo = JSON.parse(saved);
+        } catch (e) {
+            console.error('Error al cargar información del requerimiento:', e);
+            requirementInfo = {
+                number: '',
+                name: '',
+                description: '',
+                version: '',
+                tester: '',
+                startDate: ''
+            };
+        }
+    }
+    updateRequirementDisplay();
+}
+
+// Guardar información del requerimiento en localStorage
+function saveRequirementInfo() {
+    localStorage.setItem('requirementInfo', JSON.stringify(requirementInfo));
+    console.log('✅ Información del requerimiento guardada');
+}
+
+// Actualizar la visualización de la información del requerimiento
+function updateRequirementDisplay() {
+    const card = document.querySelector('.requirement-card');
+    const title = document.getElementById('requirementDisplayTitle');
+    const subtitle = document.getElementById('requirementDisplaySubtitle');
+
+    // Verificar si hay información configurada
+    const hasInfo = requirementInfo.number || requirementInfo.name;
+
+    if (hasInfo) {
+        // Mostrar información configurada
+        card.classList.remove('empty-state');
+
+        title.textContent = requirementInfo.name || 'Requerimiento';
+        subtitle.textContent = requirementInfo.number || 'N° no especificado';
+
+        // Actualizar todos los campos
+        updateFieldDisplay('displayReqNumber', requirementInfo.number);
+        updateFieldDisplay('displayReqName', requirementInfo.name);
+        updateFieldDisplay('displayReqDescription', requirementInfo.description);
+        updateFieldDisplay('displayReqVersion', requirementInfo.version);
+        updateFieldDisplay('displayReqTester', requirementInfo.tester);
+        updateFieldDisplay('displayReqStartDate', formatDisplayDate(requirementInfo.startDate));
+
+    } else {
+        // Mostrar estado vacío
+        card.classList.add('empty-state');
+        title.textContent = 'Información del Requerimiento';
+        subtitle.textContent = 'Click en editar para configurar información del requerimiento';
+
+        // Limpiar todos los campos
+        updateFieldDisplay('displayReqNumber', '');
+        updateFieldDisplay('displayReqName', '');
+        updateFieldDisplay('displayReqDescription', '');
+        updateFieldDisplay('displayReqVersion', '');
+        updateFieldDisplay('displayReqTester', '');
+        updateFieldDisplay('displayReqStartDate', '');
+    }
+}
+
+// Helper para actualizar campos individuales
+function updateFieldDisplay(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        if (value && value.trim() !== '') {
+            element.textContent = value;
+            element.classList.remove('empty');
+        } else {
+            element.textContent = '-';
+            element.classList.add('empty');
+        }
+    }
+}
+
+// Formatear fecha para visualización
+function formatDisplayDate(dateString) {
+    if (!dateString) return '';
+
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (e) {
+        return dateString; // Retornar original si hay error
+    }
+}
+
+// Abrir modal de edición
+window.openRequirementModal = function () {
+    // Llenar formulario con datos actuales
+    document.getElementById('reqNumber').value = requirementInfo.number || '';
+    document.getElementById('reqName').value = requirementInfo.name || '';
+    document.getElementById('reqDescription').value = requirementInfo.description || '';
+    document.getElementById('reqVersion').value = requirementInfo.version || '';
+    document.getElementById('reqTester').value = requirementInfo.tester || '';
+    document.getElementById('reqStartDate').value = requirementInfo.startDate || '';
+
+    // Mostrar modal
+    document.getElementById('requirementModal').style.display = 'block';
+
+    // Focus en primer campo
+    setTimeout(() => {
+        document.getElementById('reqNumber').focus();
+    }, 100);
+}
+
+// Cerrar modal de edición
+window.closeRequirementModal = function () {
+    document.getElementById('requirementModal').style.display = 'none';
+}
+
+// Limpiar toda la información del requerimiento
+window.clearRequirementInfo = function () {
+    if (confirm('⚠️ ¿Estás seguro de que deseas eliminar toda la información del requerimiento?\n\nEsta acción no se puede deshacer.')) {
+        requirementInfo = {
+            number: '',
+            name: '',
+            description: '',
+            version: '',
+            tester: '',
+            startDate: ''
+        };
+
+        saveRequirementInfo();
+        updateRequirementDisplay();
+        closeRequirementModal();
+
+        alert('✅ Información del requerimiento eliminada correctamente');
+    }
+}
+
+// Manejar envío del formulario
+document.addEventListener('DOMContentLoaded', function () {
+    // Event listener para el formulario
+    const requirementForm = document.getElementById('requirementForm');
+    if (requirementForm) {
+        requirementForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Validaciones básicas
+            const number = document.getElementById('reqNumber').value.trim();
+            const name = document.getElementById('reqName').value.trim();
+
+            if (!number) {
+                alert('❌ El N° de Requerimiento es obligatorio');
+                document.getElementById('reqNumber').focus();
+                return;
+            }
+
+            if (!name) {
+                alert('❌ El Nombre del Requerimiento es obligatorio');
+                document.getElementById('reqName').focus();
+                return;
+            }
+
+            // Guardar información
+            requirementInfo = {
+                number: number,
+                name: name,
+                description: document.getElementById('reqDescription').value.trim(),
+                version: document.getElementById('reqVersion').value.trim(),
+                tester: document.getElementById('reqTester').value.trim(),
+                startDate: document.getElementById('reqStartDate').value
+            };
+
+            saveRequirementInfo();
+            updateRequirementDisplay();
+            closeRequirementModal();
+
+            alert('✅ Información del requerimiento guardada correctamente');
+        });
+    }
+
+    // Event listener para cerrar modal
+    const closeBtn = document.getElementById('closeRequirementModalBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeRequirementModal);
+    }
+
+    // Cerrar modal al hacer clic fuera
+    const modal = document.getElementById('requirementModal');
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                closeRequirementModal();
+            }
+        });
+    }
+
+    // Cargar información al inicializar
+    loadRequirementInfo();
+});
+
+// Función para exportar información del requerimiento (para reportes)
+window.getRequirementInfoForExport = function () {
+    return {
+        hasInfo: !!(requirementInfo.number || requirementInfo.name),
+        data: requirementInfo,
+        summary: requirementInfo.number && requirementInfo.name ?
+            `${requirementInfo.number} - ${requirementInfo.name}` :
+            'Información no configurada'
+    };
+}
+
+// Auto-sugerir tester basado en casos existentes
+function suggestTesterFromCases() {
+    if (testCases && testCases.length > 0) {
+        // Obtener el tester más frecuente
+        const testerCounts = {};
+        testCases.forEach(tc => {
+            if (tc.tester && tc.tester.trim()) {
+                testerCounts[tc.tester] = (testerCounts[tc.tester] || 0) + 1;
+            }
+        });
+
+        const mostFrequentTester = Object.keys(testerCounts).reduce((a, b) =>
+            testerCounts[a] > testerCounts[b] ? a : b, ''
+        );
+
+        if (mostFrequentTester && !requirementInfo.tester) {
+            const testerInput = document.getElementById('reqTester');
+            if (testerInput) {
+                testerInput.placeholder = `Sugerido: ${mostFrequentTester}`;
+            }
+        }
+    }
+}
+
+// Llamar sugerencia cuando se abre el modal
+const originalOpenModal = window.openRequirementModal;
+window.openRequirementModal = function () {
+    originalOpenModal();
+    suggestTesterFromCases();
+}
