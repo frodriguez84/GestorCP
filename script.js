@@ -145,69 +145,148 @@ window.moveTestCaseDown = function (id) {
     }
 }
 
+// Variables globales (agregar)
+let timerPaused = false;
+let pausedTime = 0;
+
 // Funcion iniciar cronometro en filas
 function toggleRowTimer(id) {
-    // Si el cronómetro ya está activo en este caso, lo detenemos
     if (activeTimerId === id) {
+        // Si es el mismo cronómetro → DETENER (no pausar)
         stopRowTimer();
         return;
     }
 
-    // Si hay otro cronómetro activo, lo detenemos primero
     if (activeTimerId !== null) {
+        // Si hay otro activo → Confirmar cambio
+        if (!confirm(`⏱️ Ya tienes un cronómetro activo en el Escenario ${getScenarioNumber(activeTimerId)} - Ciclo ${getCicleNumber(activeTimerId)}.
+        \n¿Detenerlo y cambiar al Escenario ${getScenarioNumber(id)} - Ciclo ${getCicleNumber(activeTimerId)}?`)) {
+            return;
+        }
         stopRowTimer();
     }
 
-    // Iniciar cronómetro para este caso
-    activeTimerId = id;
-    const btn = document.getElementById(`timerBtn-${id}`);
-    if (btn) btn.textContent = '⏹️';
+    // Iniciar NUEVO cronómetro (siempre desde cero)
+    startNewTimer(id);
+}
 
-    // Buscamos el caso y acumulamos el tiempo anterior
+function startNewTimer(id) {
+    activeTimerId = id;
+    timerPaused = false;
+    pausedTime = 0;
+
     const testCase = testCases.find(tc => tc.id === id);
     rowTimerAccum = parseFloat(testCase.testTime) || 0;
     rowTimerStartTime = Date.now();
 
-    // Mostramos el tiempo corriendo en la celda (opcional)
-    rowTimerInterval = setInterval(() => {
-        const elapsed = (Date.now() - rowTimerStartTime) / 60000;
-        const total = rowTimerAccum + elapsed;
+    showTimerBar(testCase);
+    updateAllTimerButtons(); // ← NUEVA función
 
-        // Actualizar celda de tiempo
-        const td = document.querySelector(`#testCasesBody tr td:nth-child(10):nth-of-type(1)[data-id="${id}"]`)
-            || document.querySelector(`#testCasesBody tr[data-id="${id}"] td:nth-child(10)`);
+    rowTimerInterval = setInterval(updateTimerDisplay, 500);
+}
 
-        if (td) {
-            const input = td.querySelector('input[type="number"]');
-            if (input) input.value = Math.trunc(total);
-        }
-    }, 500);
+function showTimerBar(testCase) {
+    const timerBar = document.getElementById('timerBar');
+    const scenarioEl = document.getElementById('timerScenario');
+    const descriptionEl = document.getElementById('timerDescription');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    scenarioEl.textContent = `Escenario ${testCase.scenarioNumber}`;
+    descriptionEl.textContent = testCase.description.substring(0, 80) + (testCase.description.length > 80 ? '...' : '');
+
+    // RESETEAR botón de pausa cuando se muestra
+    pauseBtn.innerHTML = '⏸️ Pausar';
+    pauseBtn.className = 'btn btn-warning btn-small';
+
+    timerBar.style.display = 'block';
+}
+
+function updateTimerDisplay() {
+    if (!activeTimerId || timerPaused) return;
+
+    const elapsed = (Date.now() - rowTimerStartTime) / 60000;
+    const total = rowTimerAccum + elapsed;
+    const minutes = Math.floor(total);
+    const seconds = Math.floor((total - minutes) * 60);
+
+    const display = document.getElementById('timerDisplay');
+    if (display) {
+        display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+}
+
+function pauseTimer() {
+    if (!activeTimerId) return;
+
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    if (timerPaused) {
+        // Reanudar
+        timerPaused = false;
+        rowTimerStartTime = Date.now() - pausedTime;
+        pauseBtn.innerHTML = '⏸️ Pausar';
+        pauseBtn.className = 'btn btn-warning btn-small';
+    } else {
+        // Pausar
+        timerPaused = true;
+        pausedTime = Date.now() - rowTimerStartTime;
+        pauseBtn.innerHTML = '▶️ Reanudar';
+        pauseBtn.className = 'btn btn-success btn-small';
+    }
 }
 
 // Funcion detener cronometro en filas
 function stopRowTimer() {
     if (activeTimerId === null) return;
+
     clearInterval(rowTimerInterval);
 
-    // Calculamos el tiempo total y lo sumamos (TRUNCAR minutos)
+    // Guardar tiempo final
     const testCase = testCases.find(tc => tc.id === activeTimerId);
     if (testCase) {
-        const elapsed = (Date.now() - rowTimerStartTime) / 60000;
+        const elapsed = timerPaused ? pausedTime / 60000 : (Date.now() - rowTimerStartTime) / 60000;
         let total = (parseFloat(testCase.testTime) || 0) + elapsed;
-        testCase.testTime = Math.trunc(total); // Truncar SIEMPRE hacia abajo
+        testCase.testTime = Math.trunc(total);
     }
 
-    // Restaurar botón
-    const btn = document.getElementById(`timerBtn-${activeTimerId}`);
-    if (btn) btn.textContent = '⏱️';
+    // RESET COMPLETO
+    const oldTimerId = activeTimerId;
+    activeTimerId = null;
+    timerPaused = false;
+    pausedTime = 0;
+
+    // Ocultar barra y actualizar botones
+    document.getElementById('timerBar').style.display = 'none';
+    updateAllTimerButtons(); // ← NUEVA función
 
     saveToStorage();
     renderTestCases();
+}
 
-    activeTimerId = null;
-    rowTimerInterval = null;
-    rowTimerStartTime = null;
-    rowTimerAccum = 0;
+function getScenarioNumber(id) {
+    const testCase = testCases.find(tc => tc.id === id);
+    return testCase ? testCase.scenarioNumber : '?';
+}
+
+function getCicleNumber(id) {
+    const testCase = testCases.find(tc => tc.id === id);
+    return testCase ? testCase.cycleNumber : '?';
+}
+
+function updateAllTimerButtons() {
+    // Actualizar todos los botones de cronómetro en la tabla
+    testCases.forEach(tc => {
+        const btn = document.getElementById(`timerBtn-${tc.id}`);
+        if (btn) {
+            if (activeTimerId === tc.id) {
+                btn.textContent = '⏹️';
+                btn.title = 'Detener cronómetro';
+            } else {
+                btn.textContent = '⏱️';
+                btn.title = 'Iniciar cronómetro';
+            }
+        }
+    });
 }
 
 // Funcion para actualizar tiempo manualmente
@@ -649,7 +728,7 @@ window.renderTestCases = function () {
                             <button class="btn btn-info btn-small" onclick="openEditModal(${testCase.id})" title="Editar Escenario">✏️</button>
                             <button class="btn btn-success btn-small" onclick="duplicateTestCase(${testCase.id})" title="Duplicar Escenario">📋</button>
                             <button class="btn btn-danger btn-small" onclick="deleteTestCase(${testCase.id})" title="Borrar Escenario">🗑️</button>
-                            <button class="btn btn-info btn-small" onclick="toggleRowTimer(${testCase.id})" id="timerBtn-${testCase.id}" title="Cronometrar Tiempo">⏱️</button>
+                            <button class="btn btn-info btn-small" onclick="toggleRowTimer(${testCase.id})" id="timerBtn-${testCase.id}" title="Cronometrar Tiempo">${activeTimerId === testCase.id ? '⏹️' : '⏱️'}</button>
                             <button class="btn btn-small" onclick="moveTestCaseUp(${testCase.id})" ${filteredCases[0].id === testCase.id ? 'disabled' : ''} title="Subir registro">⬆️</button>
                             <button class="btn btn-small" onclick="moveTestCaseDown(${testCase.id})" ${filteredCases[filteredCases.length - 1].id === testCase.id ? 'disabled' : ''} title="Bajar registro">⬇️</button>
                         </td>
@@ -835,13 +914,13 @@ window.loadTestCases = function () {
             reader.onload = function (e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    
+
                     // DETECTAR FORMATO Y PREPARAR RESUMEN
                     let casesCount = 0;
                     let hasRequirementInfo = false;
                     let variablesCount = 0;
                     let formatType = '';
-                    
+
                     if (Array.isArray(data)) {
                         // ===== FORMATO ANTIGUO - Solo casos =====
                         formatType = 'antiguo';
@@ -850,21 +929,21 @@ window.loadTestCases = function () {
                         // ===== FORMATO NUEVO - Objeto completo =====
                         formatType = 'nuevo';
                         casesCount = data.testCases ? data.testCases.length : 0;
-                        
+
                         // Verificar info del requerimiento
                         if (data.requirementInfo && typeof data.requirementInfo === 'object') {
                             hasRequirementInfo = Object.values(data.requirementInfo).some(v => v && v.trim && v.trim());
                         }
-                        
+
                         // Verificar variables
                         if (data.inputVariableNames && Array.isArray(data.inputVariableNames)) {
                             variablesCount = data.inputVariableNames.length;
                         }
-                        
+
                         // 🔧 NUEVA LÓGICA: Si no hay variables globales, intentar extraer de casos
                         if (variablesCount === 0 && data.testCases && data.testCases.length > 0) {
                             const extractedVariables = [];
-                            
+
                             // Buscar en el primer caso que tenga variables
                             for (const testCase of data.testCases) {
                                 if (testCase.inputVariables && Array.isArray(testCase.inputVariables) && testCase.inputVariables.length > 0) {
@@ -876,7 +955,7 @@ window.loadTestCases = function () {
                                     break; // Con el primer caso es suficiente
                                 }
                             }
-                            
+
                             if (extractedVariables.length > 0) {
                                 variablesCount = extractedVariables.length;
                                 console.log('🔧 Variables detectadas en casos:', extractedVariables);
@@ -886,45 +965,45 @@ window.loadTestCases = function () {
                         alert('Formato de archivo inválido.\nDebe ser un archivo JSON válido con casos de prueba.');
                         return;
                     }
-                    
+
                     // CREAR MENSAJE DE CONFIRMACIÓN ÚNICA
                     let confirmMessage = `🔄 ¿Deseas cargar los datos del archivo JSON?\n\nEsto reemplazará:\n`;
                     confirmMessage += `• ${casesCount} escenario${casesCount !== 1 ? 's' : ''}\n`;
-                    
+
                     if (hasRequirementInfo) {
                         confirmMessage += `• Información del requerimiento\n`;
                     }
-                    
+
                     if (variablesCount > 0) {
                         confirmMessage += `• ${variablesCount} variable${variablesCount !== 1 ? 's' : ''} configurada${variablesCount !== 1 ? 's' : ''}\n`;
                     }
-                    
+
                     confirmMessage += `\n📂 Formato: ${formatType}\n\n`;
                     confirmMessage += `Aceptar = Cargar todo\nCancelar = Cancelar importación`;
-                    
+
                     // CONFIRMACIÓN ÚNICA
                     if (!confirm(confirmMessage)) {
                         console.log('❌ Importación cancelada por el usuario');
                         return;
                     }
-                    
+
                     // ===== IMPORTAR TODO AUTOMÁTICAMENTE =====
                     let importResults = [];
-                    
+
                     if (Array.isArray(data)) {
                         // FORMATO ANTIGUO - Solo casos
                         testCases = data;
                         importResults.push(`✅ ${data.length} escenarios cargados`);
-                        
+
                     } else {
                         // FORMATO NUEVO - Objeto completo
-                        
+
                         // 1. CARGAR CASOS
                         if (data.testCases && Array.isArray(data.testCases)) {
                             testCases = data.testCases;
                             importResults.push(`✅ ${data.testCases.length} escenarios cargados`);
                         }
-                        
+
                         // 2. CARGAR INFO DEL REQUERIMIENTO (automático)
                         if (hasRequirementInfo) {
                             requirementInfo = { ...data.requirementInfo };
@@ -932,18 +1011,18 @@ window.loadTestCases = function () {
                             updateRequirementDisplay();
                             importResults.push('✅ Información del requerimiento cargada');
                         }
-                        
+
                         // 3. CARGAR VARIABLES (automático) - VERSIÓN MEJORADA
                         if (data.inputVariableNames && Array.isArray(data.inputVariableNames) && data.inputVariableNames.length > 0) {
                             // Variables desde inputVariableNames (normal)
                             inputVariableNames = [...data.inputVariableNames];
                             localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
                             importResults.push(`✅ ${data.inputVariableNames.length} variable${data.inputVariableNames.length !== 1 ? 's' : ''} cargada${data.inputVariableNames.length !== 1 ? 's' : ''}`);
-                            
+
                         } else if (testCases.length > 0) {
                             // ===== NUEVA LÓGICA: Extraer variables de los casos =====
                             const extractedVariables = [];
-                            
+
                             // Buscar en el primer caso que tenga variables
                             for (const testCase of testCases) {
                                 if (testCase.inputVariables && Array.isArray(testCase.inputVariables) && testCase.inputVariables.length > 0) {
@@ -955,7 +1034,7 @@ window.loadTestCases = function () {
                                     break; // Con el primer caso que tenga variables es suficiente
                                 }
                             }
-                            
+
                             if (extractedVariables.length > 0) {
                                 inputVariableNames = extractedVariables;
                                 localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
@@ -963,7 +1042,7 @@ window.loadTestCases = function () {
                                 console.log('🔧 Variables extraídas automáticamente:', extractedVariables);
                             }
                         }
-                        
+
                         // 4. ACTUALIZAR ESTRUCTURA DE CASOS con las variables (nueva o extraída)
                         if (inputVariableNames.length > 0) {
                             testCases.forEach(tc => {
@@ -974,19 +1053,19 @@ window.loadTestCases = function () {
                             });
                         }
                     }
-                    
+
                     // GUARDAR Y ACTUALIZAR INTERFAZ
                     saveToStorage();
                     renderTestCases();
                     updateStats();
                     updateFilters();
-                    
+
                     // MOSTRAR RESULTADO
                     const successMessage = '🎉 IMPORTACIÓN COMPLETADA:\n\n' + importResults.join('\n');
                     alert(successMessage);
-                    
+
                     console.log('✅ Importación exitosa:', importResults);
-                    
+
                 } catch (error) {
                     console.error('Error al leer archivo JSON:', error);
                     alert('Error al leer el archivo: ' + error.message);

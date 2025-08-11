@@ -181,6 +181,24 @@
                 </div>
             </div>
         </div>
+        <!-- Barra de cronómetro persistente (agregar después de .filters) -->
+        <div id="timerBar" class="timer-active-bar" style="display: none;">
+            <div class="timer-bar-content">
+                <div class="timer-info">
+                    <span class="timer-icon">🕐</span>
+                    <div class="timer-details">
+                        <strong id="timerScenario">Escenario --</strong>
+                        <span id="timerDescription">--</span>
+                    </div>
+                    <div class="timer-display" id="timerDisplay">00:00</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn btn-warning btn-small" onclick="pauseTimer()" id="pauseBtn">⏸️ Pausar</button>
+                    <button class="btn btn-danger btn-small" onclick="stopRowTimer()">⏹️ Finalizar</button>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Toolbar de acciones masivas (aparece cuando hay casos seleccionados) -->
         <div id="bulkActionsToolbar" class="bulk-toolbar" style="display: none;">
