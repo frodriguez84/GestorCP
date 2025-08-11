@@ -835,13 +835,13 @@ window.loadTestCases = function () {
             reader.onload = function (e) {
                 try {
                     const data = JSON.parse(e.target.result);
-
+                    
                     // DETECTAR FORMATO Y PREPARAR RESUMEN
                     let casesCount = 0;
                     let hasRequirementInfo = false;
                     let variablesCount = 0;
                     let formatType = '';
-
+                    
                     if (Array.isArray(data)) {
                         // ===== FORMATO ANTIGUO - Solo casos =====
                         formatType = 'antiguo';
@@ -850,59 +850,81 @@ window.loadTestCases = function () {
                         // ===== FORMATO NUEVO - Objeto completo =====
                         formatType = 'nuevo';
                         casesCount = data.testCases ? data.testCases.length : 0;
-
+                        
                         // Verificar info del requerimiento
                         if (data.requirementInfo && typeof data.requirementInfo === 'object') {
                             hasRequirementInfo = Object.values(data.requirementInfo).some(v => v && v.trim && v.trim());
                         }
-
+                        
                         // Verificar variables
                         if (data.inputVariableNames && Array.isArray(data.inputVariableNames)) {
                             variablesCount = data.inputVariableNames.length;
+                        }
+                        
+                        // 🔧 NUEVA LÓGICA: Si no hay variables globales, intentar extraer de casos
+                        if (variablesCount === 0 && data.testCases && data.testCases.length > 0) {
+                            const extractedVariables = [];
+                            
+                            // Buscar en el primer caso que tenga variables
+                            for (const testCase of data.testCases) {
+                                if (testCase.inputVariables && Array.isArray(testCase.inputVariables) && testCase.inputVariables.length > 0) {
+                                    testCase.inputVariables.forEach(variable => {
+                                        if (variable.name && !extractedVariables.includes(variable.name)) {
+                                            extractedVariables.push(variable.name);
+                                        }
+                                    });
+                                    break; // Con el primer caso es suficiente
+                                }
+                            }
+                            
+                            if (extractedVariables.length > 0) {
+                                variablesCount = extractedVariables.length;
+                                console.log('🔧 Variables detectadas en casos:', extractedVariables);
+                            }
                         }
                     } else {
                         alert('Formato de archivo inválido.\nDebe ser un archivo JSON válido con casos de prueba.');
                         return;
                     }
-
+                    
                     // CREAR MENSAJE DE CONFIRMACIÓN ÚNICA
                     let confirmMessage = `🔄 ¿Deseas cargar los datos del archivo JSON?\n\nEsto reemplazará:\n`;
                     confirmMessage += `• ${casesCount} escenario${casesCount !== 1 ? 's' : ''}\n`;
-
+                    
                     if (hasRequirementInfo) {
                         confirmMessage += `• Información del requerimiento\n`;
                     }
-
+                    
                     if (variablesCount > 0) {
                         confirmMessage += `• ${variablesCount} variable${variablesCount !== 1 ? 's' : ''} configurada${variablesCount !== 1 ? 's' : ''}\n`;
                     }
-
+                    
                     confirmMessage += `\n📂 Formato: ${formatType}\n\n`;
                     confirmMessage += `Aceptar = Cargar todo\nCancelar = Cancelar importación`;
-
+                    
                     // CONFIRMACIÓN ÚNICA
                     if (!confirm(confirmMessage)) {
                         console.log('❌ Importación cancelada por el usuario');
                         return;
                     }
-
+                    
                     // ===== IMPORTAR TODO AUTOMÁTICAMENTE =====
                     let importResults = [];
-
+                    
                     if (Array.isArray(data)) {
                         // FORMATO ANTIGUO - Solo casos
                         testCases = data;
                         importResults.push(`✅ ${data.length} escenarios cargados`);
-
+                        
                     } else {
                         // FORMATO NUEVO - Objeto completo
-
+                        
                         // 1. CARGAR CASOS
                         if (data.testCases && Array.isArray(data.testCases)) {
                             testCases = data.testCases;
                             importResults.push(`✅ ${data.testCases.length} escenarios cargados`);
                         }
-
+                        
                         // 2. CARGAR INFO DEL REQUERIMIENTO (automático)
                         if (hasRequirementInfo) {
                             requirementInfo = { ...data.requirementInfo };
@@ -910,36 +932,61 @@ window.loadTestCases = function () {
                             updateRequirementDisplay();
                             importResults.push('✅ Información del requerimiento cargada');
                         }
-
-                        // 3. CARGAR VARIABLES (automático)
-                        if (variablesCount > 0) {
+                        
+                        // 3. CARGAR VARIABLES (automático) - VERSIÓN MEJORADA
+                        if (data.inputVariableNames && Array.isArray(data.inputVariableNames) && data.inputVariableNames.length > 0) {
+                            // Variables desde inputVariableNames (normal)
                             inputVariableNames = [...data.inputVariableNames];
                             localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
-
-                            // Actualizar estructura de casos existentes
+                            importResults.push(`✅ ${data.inputVariableNames.length} variable${data.inputVariableNames.length !== 1 ? 's' : ''} cargada${data.inputVariableNames.length !== 1 ? 's' : ''}`);
+                            
+                        } else if (testCases.length > 0) {
+                            // ===== NUEVA LÓGICA: Extraer variables de los casos =====
+                            const extractedVariables = [];
+                            
+                            // Buscar en el primer caso que tenga variables
+                            for (const testCase of testCases) {
+                                if (testCase.inputVariables && Array.isArray(testCase.inputVariables) && testCase.inputVariables.length > 0) {
+                                    testCase.inputVariables.forEach(variable => {
+                                        if (variable.name && !extractedVariables.includes(variable.name)) {
+                                            extractedVariables.push(variable.name);
+                                        }
+                                    });
+                                    break; // Con el primer caso que tenga variables es suficiente
+                                }
+                            }
+                            
+                            if (extractedVariables.length > 0) {
+                                inputVariableNames = extractedVariables;
+                                localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
+                                importResults.push(`✅ ${extractedVariables.length} variable${extractedVariables.length !== 1 ? 's' : ''} extraída${extractedVariables.length !== 1 ? 's' : ''} de los casos`);
+                                console.log('🔧 Variables extraídas automáticamente:', extractedVariables);
+                            }
+                        }
+                        
+                        // 4. ACTUALIZAR ESTRUCTURA DE CASOS con las variables (nueva o extraída)
+                        if (inputVariableNames.length > 0) {
                             testCases.forEach(tc => {
                                 tc.inputVariables = inputVariableNames.map(name => {
                                     const found = (tc.inputVariables || []).find(v => v.name === name);
                                     return { name, value: found ? found.value : '' };
                                 });
                             });
-
-                            importResults.push(`✅ ${variablesCount} variable${variablesCount !== 1 ? 's' : ''} cargada${variablesCount !== 1 ? 's' : ''}`);
                         }
                     }
-
+                    
                     // GUARDAR Y ACTUALIZAR INTERFAZ
                     saveToStorage();
                     renderTestCases();
                     updateStats();
                     updateFilters();
-
+                    
                     // MOSTRAR RESULTADO
                     const successMessage = '🎉 IMPORTACIÓN COMPLETADA:\n\n' + importResults.join('\n');
                     alert(successMessage);
-
+                    
                     console.log('✅ Importación exitosa:', importResults);
-
+                    
                 } catch (error) {
                     console.error('Error al leer archivo JSON:', error);
                     alert('Error al leer el archivo: ' + error.message);
