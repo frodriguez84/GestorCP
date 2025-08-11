@@ -795,19 +795,34 @@ window.loadFromStorage = function () {
     }
 }
 
-// Funciones de archivo
+//======================================
+// FUNCION PARA GUARDAR ESCENARIOS EN JSON
+//======================================
 window.saveTestCases = function () {
-    const data = JSON.stringify(testCases, null, 2);
+    // Crear objeto completo con toda la información
+    const exportData = {
+        version: "2.0",
+        exportDate: new Date().toISOString(),
+        testCases: testCases,
+        requirementInfo: requirementInfo,
+        inputVariableNames: inputVariableNames
+    };
+
+    const data = JSON.stringify(exportData, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `casos_prueba_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `casos_prueba_completo_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
+//======================================================
+// FUNCION PARA CARGAR ESCENARIOS DESDE UN ARCHIVO JSON
+//======================================================
 
 window.loadTestCases = function () {
     const input = document.createElement('input');
@@ -820,26 +835,113 @@ window.loadTestCases = function () {
             reader.onload = function (e) {
                 try {
                     const data = JSON.parse(e.target.result);
+
+                    // DETECTAR FORMATO Y PREPARAR RESUMEN
+                    let casesCount = 0;
+                    let hasRequirementInfo = false;
+                    let variablesCount = 0;
+                    let formatType = '';
+
                     if (Array.isArray(data)) {
-                        if (confirm('¿Deseas reemplazar todos los escenarios actuales o agregar los nuevos?\n\nAceptar = Reemplazar\nCancelar = Agregar')) {
-                            testCases = data;
-                        } else {
-                            // Agregar nuevos casos con IDs únicos
-                            const maxId = Math.max(...testCases.map(tc => tc.id), 0);
-                            data.forEach((tc, index) => {
-                                tc.id = maxId + index + 1;
-                                testCases.push(tc);
-                            });
+                        // ===== FORMATO ANTIGUO - Solo casos =====
+                        formatType = 'antiguo';
+                        casesCount = data.length;
+                    } else if (data && typeof data === 'object' && data.testCases) {
+                        // ===== FORMATO NUEVO - Objeto completo =====
+                        formatType = 'nuevo';
+                        casesCount = data.testCases ? data.testCases.length : 0;
+
+                        // Verificar info del requerimiento
+                        if (data.requirementInfo && typeof data.requirementInfo === 'object') {
+                            hasRequirementInfo = Object.values(data.requirementInfo).some(v => v && v.trim && v.trim());
                         }
-                        saveToStorage();
-                        renderTestCases();
-                        updateStats();
-                        updateFilters();
-                        alert('Escenarios cargados exitosamente');
+
+                        // Verificar variables
+                        if (data.inputVariableNames && Array.isArray(data.inputVariableNames)) {
+                            variablesCount = data.inputVariableNames.length;
+                        }
                     } else {
-                        alert('Formato de archivo inválido');
+                        alert('Formato de archivo inválido.\nDebe ser un archivo JSON válido con casos de prueba.');
+                        return;
                     }
+
+                    // CREAR MENSAJE DE CONFIRMACIÓN ÚNICA
+                    let confirmMessage = `🔄 ¿Deseas cargar los datos del archivo JSON?\n\nEsto reemplazará:\n`;
+                    confirmMessage += `• ${casesCount} escenario${casesCount !== 1 ? 's' : ''}\n`;
+
+                    if (hasRequirementInfo) {
+                        confirmMessage += `• Información del requerimiento\n`;
+                    }
+
+                    if (variablesCount > 0) {
+                        confirmMessage += `• ${variablesCount} variable${variablesCount !== 1 ? 's' : ''} configurada${variablesCount !== 1 ? 's' : ''}\n`;
+                    }
+
+                    confirmMessage += `\n📂 Formato: ${formatType}\n\n`;
+                    confirmMessage += `Aceptar = Cargar todo\nCancelar = Cancelar importación`;
+
+                    // CONFIRMACIÓN ÚNICA
+                    if (!confirm(confirmMessage)) {
+                        console.log('❌ Importación cancelada por el usuario');
+                        return;
+                    }
+
+                    // ===== IMPORTAR TODO AUTOMÁTICAMENTE =====
+                    let importResults = [];
+
+                    if (Array.isArray(data)) {
+                        // FORMATO ANTIGUO - Solo casos
+                        testCases = data;
+                        importResults.push(`✅ ${data.length} escenarios cargados`);
+
+                    } else {
+                        // FORMATO NUEVO - Objeto completo
+
+                        // 1. CARGAR CASOS
+                        if (data.testCases && Array.isArray(data.testCases)) {
+                            testCases = data.testCases;
+                            importResults.push(`✅ ${data.testCases.length} escenarios cargados`);
+                        }
+
+                        // 2. CARGAR INFO DEL REQUERIMIENTO (automático)
+                        if (hasRequirementInfo) {
+                            requirementInfo = { ...data.requirementInfo };
+                            localStorage.setItem('requirementInfo', JSON.stringify(requirementInfo));
+                            updateRequirementDisplay();
+                            importResults.push('✅ Información del requerimiento cargada');
+                        }
+
+                        // 3. CARGAR VARIABLES (automático)
+                        if (variablesCount > 0) {
+                            inputVariableNames = [...data.inputVariableNames];
+                            localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
+
+                            // Actualizar estructura de casos existentes
+                            testCases.forEach(tc => {
+                                tc.inputVariables = inputVariableNames.map(name => {
+                                    const found = (tc.inputVariables || []).find(v => v.name === name);
+                                    return { name, value: found ? found.value : '' };
+                                });
+                            });
+
+                            importResults.push(`✅ ${variablesCount} variable${variablesCount !== 1 ? 's' : ''} cargada${variablesCount !== 1 ? 's' : ''}`);
+                        }
+                    }
+
+                    // GUARDAR Y ACTUALIZAR INTERFAZ
+                    saveToStorage();
+                    renderTestCases();
+                    updateStats();
+                    updateFilters();
+
+                    // MOSTRAR RESULTADO
+                    const successMessage = '🎉 IMPORTACIÓN COMPLETADA:\n\n' + importResults.join('\n');
+                    alert(successMessage);
+
+                    console.log('✅ Importación exitosa:', importResults);
+
                 } catch (error) {
+                    console.error('Error al leer archivo JSON:', error);
                     alert('Error al leer el archivo: ' + error.message);
                 }
             };
@@ -880,7 +982,8 @@ async function exportToExcel() {
         reqSheet.addRow(["N° Requerimiento:", reqInfo.data.number || ""]);
         reqSheet.addRow(["Nombre:", reqInfo.data.name || ""]);
         reqSheet.addRow(["Descripción:", reqInfo.data.description || ""]);
-        reqSheet.addRow(["Caso:", reqInfo.data.caso || ""]);
+        reqSheet.addRow(["N° Caso:", reqInfo.data.caso || ""]);
+        reqSheet.addRow(["Titulo Caso:", reqInfo.data.titleCase || ""]);
         reqSheet.addRow(["Tester Principal:", reqInfo.data.tester || ""]);
         reqSheet.addRow(["Fecha de Inicio:", reqInfo.data.startDate || ""]);
     } else {
@@ -1596,6 +1699,7 @@ window.clearAllData = function () {
                 name: '',
                 description: '',
                 caso: '',
+                titleCase: '',
                 tester: '',
                 startDate: ''
             };
@@ -2465,6 +2569,7 @@ let requirementInfo = {
     name: '',
     description: '',
     caso: '',
+    titleCase: '',
     tester: '',
     startDate: ''
 };
@@ -2482,6 +2587,7 @@ function loadRequirementInfo() {
                 name: '',
                 description: '',
                 caso: '',
+                titleCase: '',
                 tester: '',
                 startDate: ''
             };
@@ -2516,7 +2622,8 @@ function updateRequirementDisplay() {
         updateFieldDisplay('displayReqNumber', requirementInfo.number);
         updateFieldDisplay('displayReqName', requirementInfo.name);
         updateFieldDisplay('displayReqDescription', requirementInfo.description);
-        updateFieldDisplay('displayReqVersion', requirementInfo.caso);
+        updateFieldDisplay('displayReqCase', requirementInfo.caso);
+        updateFieldDisplay('displayReqTitleCase', requirementInfo.titleCase);
         updateFieldDisplay('displayReqTester', requirementInfo.tester);
 
         // USAR LA FUNCIÓN CORREGIDA para la fecha
@@ -2532,7 +2639,8 @@ function updateRequirementDisplay() {
         updateFieldDisplay('displayReqNumber', '');
         updateFieldDisplay('displayReqName', '');
         updateFieldDisplay('displayReqDescription', '');
-        updateFieldDisplay('displayReqVersion', '');
+        updateFieldDisplay('displayReqCase', '');
+        updateFieldDisplay('displayReqTitleCase', '');
         updateFieldDisplay('displayReqTester', '');
         updateFieldDisplay('displayReqStartDate', '');
     }
@@ -2624,7 +2732,8 @@ window.openRequirementModal = function () {
     document.getElementById('reqNumber').value = requirementInfo.number || '';
     document.getElementById('reqName').value = requirementInfo.name || '';
     document.getElementById('reqDescription').value = requirementInfo.description || '';
-    document.getElementById('reqVersion').value = requirementInfo.caso || '';
+    document.getElementById('reqCase').value = requirementInfo.caso || '';
+    document.getElementById('reqTitleCase').value = requirementInfo.titleCase || '';
     document.getElementById('reqTester').value = requirementInfo.tester || '';
     document.getElementById('reqStartDate').value = requirementInfo.startDate || '';
 
@@ -2650,6 +2759,7 @@ window.clearRequirementInfo = function () {
             name: '',
             description: '',
             caso: '',
+            titleCase: '',
             tester: '',
             startDate: ''
         };
@@ -2691,7 +2801,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 number: number,
                 name: name,
                 description: document.getElementById('reqDescription').value.trim(),
-                caso: document.getElementById('reqVersion').value.trim(),
+                caso: document.getElementById('reqCase').value.trim(),
+                titleCase: document.getElementById('reqTitleCase').value.trim(),
                 tester: document.getElementById('reqTester').value.trim(),
                 startDate: document.getElementById('reqStartDate').value
             };
@@ -2992,6 +3103,7 @@ function parseRequirementInfoFixed(sheet) {
             name: '',
             description: '',
             caso: '',
+            titleCase: '',
             tester: '',
             startDate: ''
         };
@@ -3022,9 +3134,14 @@ function parseRequirementInfoFixed(sheet) {
                 } else if (label.includes('descripción') || label.includes('descripcion')) {
                     requirement.description = value;
                     console.log(`✅ Descripción encontrada: "${value}"`);
-                } else if (label.includes('versión') || label.includes('version') || label.includes('caso')) {
+                } else if (label.includes('titulo caso') || label.includes('título caso')) {
+                    requirement.titleCase = value;
+                    console.log(`✅ Titulo caso encontrado: "${value}"`);
+                } else if ((label.includes('n°') && label.includes('caso')) ||
+                    (label.includes('numero') && label.includes('caso')) ||
+                    (label.includes('número') && label.includes('caso'))) {
                     requirement.caso = value;
-                    console.log(`✅ Caso encontrado: "${value}"`);
+                    console.log(`✅ N° Caso encontrado: "${value}"`);
                 } else if (label.includes('tester') || label.includes('probador')) {
                     requirement.tester = value;
                     console.log(`✅ Tester encontrado: "${value}"`);
@@ -3052,45 +3169,7 @@ function parseRequirementInfoFixed(sheet) {
     }
 }
 
-// NUEVA FUNCIÓN: Extraer imágenes en un rango de filas
-/*async function extractImagesInRange(sheet, workbook, startRow, endRow) {
-    const images = [];
 
-    try {
-        // Intentar obtener imágenes usando diferentes métodos de ExcelJS
-        if (workbook.model && workbook.model.media) {
-            for (let i = 0; i < workbook.model.media.length; i++) {
-                try {
-                    const media = workbook.model.media[i];
-                    if (media && media.buffer) {
-                        // Convertir buffer a base64
-                        const uint8Array = new Uint8Array(media.buffer);
-                        const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join('');
-                        const base64 = btoa(binary);
-
-                        // Determinar tipo MIME
-                        const extension = media.extension || 'png';
-                        const mimeType = `image/${extension}`;
-
-                        images.push({
-                            name: `Evidencia_${images.length + 1}.${extension}`,
-                            data: `data:${mimeType};base64,${base64}`
-                        });
-
-                        console.log(`🖼️ Imagen ${images.length} extraída correctamente`);
-                    }
-                } catch (imgError) {
-                    console.warn(`Error al procesar imagen ${i}:`, imgError);
-                }
-            }
-        }
-
-    } catch (error) {
-        console.error('Error en extractImagesInRange:', error);
-    }
-
-    return images;
-}*/
 
 // NUEVA FUNCIÓN: Extraer todas las imágenes del workbook
 async function extractAllImagesFromWorkbook(workbook) {
