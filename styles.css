@@ -661,6 +661,449 @@ th {
 }
 
 /* ===============================================
+   DRAG AND DROP
+   =============================================== */
+/* ===============================================
+   COLUMNA Y HANDLE DE DRAG & DROP
+   =============================================== */
+
+/* Columna del handle */
+.drag-handle-column {
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    text-align: center;
+    padding: 8px 4px;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+/* Handle de drag */
+.drag-handle {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #667eea;
+    font-weight: bold;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin: 0 auto;
+}
+
+.drag-handle:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #5a67d8;
+    transform: scale(1.1);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    background: rgba(102, 126, 234, 0.2);
+}
+
+/* Handle deshabilitado */
+.drag-handle-disabled {
+    opacity: 0.3;
+    cursor: not-allowed !important;
+    color: #95a5a6 !important;
+}
+
+.drag-handle-disabled:hover {
+    background: rgba(149, 165, 166, 0.1) !important;
+    transform: none !important;
+}
+
+/* ===============================================
+   ESTADOS VISUALES DURANTE DRAG
+   =============================================== */
+
+/* Bloque siendo arrastrado */
+.scenario-block-dragging {
+    opacity: 0.7;
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-left: 4px solid #667eea !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transform: scale(0.98);
+}
+
+/* Zona de drop válida */
+.drop-zone-valid {
+    border-bottom: 3px dashed #10b981 !important;
+    background: rgba(16, 185, 129, 0.05) !important;
+}
+
+/* Zona de drop destacada */
+.drop-zone-highlight {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+/* ===============================================
+   ELEMENTO FANTASMA (GHOST)
+   =============================================== */
+
+/* Elemento fantasma */
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.drag-ghost-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drag-ghost-icon {
+    font-size: 16px;
+}
+
+.drag-ghost-text {
+    color: #2c3e50;
+}
+
+/* ===============================================
+   NOTIFICACIONES DEL SISTEMA DRAG & DROP
+   =============================================== */
+
+/* Notificaciones base */
+.drag-success-notification,
+.drag-restriction-notification,
+.drag-undo-notification,
+.drag-help-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.drag-help-notification {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    animation: bounceIn 0.3s ease-out;
+}
+
+.drag-success-content,
+.drag-restriction-content,
+.drag-undo-content,
+.drag-help-content {
+    background: white;
+    border: 2px solid;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+}
+
+.drag-success-content {
+    border-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+}
+
+.drag-restriction-content {
+    border-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+}
+
+.drag-undo-content {
+    border-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
+}
+
+.drag-help-content {
+    background: rgba(245, 158, 11, 0.95);
+    color: white;
+    border: 2px solid #f59e0b;
+    font-size: 16px;
+}
+
+.drag-help-icon {
+    font-size: 20px;
+}
+
+.drag-undo-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.drag-undo-btn:hover {
+    background: #5a67d8;
+}
+
+/* ===============================================
+   ANIMACIONES
+   =============================================== */
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* ===============================================
+   TOOLBAR DE REORDENAMIENTO
+   =============================================== */
+
+/* Toolbar de reordenamiento */
+.reordering-toolbar {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(10px);
+    transition: all var(--transition-normal);
+}
+
+.reordering-toolbar:hover {
+    border-color: rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-md);
+}
+
+.reordering-toolbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.reordering-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.reordering-icon {
+    font-size: 1.2em;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.reordering-text {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.reordering-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+/* ===============================================
+   AUTO-SCROLL DURANTE DRAG
+   =============================================== */
+
+/* Indicadores visuales de auto-scroll */
+.table-container.auto-scrolling {
+    position: relative;
+}
+
+.table-container.auto-scrolling::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #667eea, transparent);
+    z-index: 1000;
+    animation: scrollIndicator 1s ease-in-out infinite alternate;
+}
+
+.table-container.auto-scroll-up::before {
+    top: 0;
+    background: linear-gradient(90deg, transparent, #10b981, transparent);
+}
+
+.table-container.auto-scroll-down::before {
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, #f59e0b, transparent);
+}
+
+@keyframes scrollIndicator {
+    0% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Zonas de auto-scroll visuales (solo durante desarrollo/debug) */
+.debug-auto-scroll-zones .table-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(16, 185, 129, 0.1);
+    border-bottom: 2px dashed rgba(16, 185, 129, 0.3);
+    pointer-events: none;
+    z-index: 999;
+}
+
+.debug-auto-scroll-zones .table-container::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(245, 158, 11, 0.1);
+    border-top: 2px dashed rgba(245, 158, 11, 0.3);
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* ===============================================
+   MODO OSCURO - DRAG & DROP
+   =============================================== */
+
+body.dark-mode .drag-handle {
+    color: var(--dark-accent);
+}
+
+body.dark-mode .drag-handle:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--dark-accent-light);
+}
+
+body.dark-mode .drag-handle-disabled {
+    color: var(--dark-text-muted) !important;
+}
+
+body.dark-mode .scenario-block-dragging {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-left-color: var(--dark-accent) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+body.dark-mode .drop-zone-valid {
+    border-bottom-color: var(--success-light) !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+}
+
+body.dark-mode .drop-zone-highlight {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+body.dark-mode .drag-ghost {
+    background: var(--dark-surface);
+    border-color: var(--dark-accent);
+    color: var(--dark-text-primary);
+}
+
+body.dark-mode .reordering-toolbar {
+    background: var(--dark-surface);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+body.dark-mode .reordering-toolbar:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+body.dark-mode .reordering-icon {
+    color: var(--dark-accent);
+}
+
+body.dark-mode .reordering-text {
+    color: var(--dark-text-primary);
+}
+
+body.dark-mode .table-container.auto-scroll-up::before {
+    background: linear-gradient(90deg, transparent, var(--success-light), transparent);
+}
+
+body.dark-mode .table-container.auto-scroll-down::before {
+    background: linear-gradient(90deg, transparent, var(--warning-light), transparent);
+}
+
+/* ===============================================
+   RESPONSIVE - DRAG & DROP
+   =============================================== */
+
+@media (max-width: 768px) {
+    .reordering-toolbar-content {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+
+    .reordering-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .drag-ghost {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    .drag-handle-column {
+        width: 25px;
+        min-width: 25px;
+        max-width: 25px;
+    }
+
+    .drag-handle {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+
+/* ===============================================
    MODALES
    =============================================== */
 .modal {
