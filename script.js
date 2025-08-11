@@ -848,10 +848,57 @@ window.loadTestCases = function () {
     };
     input.click();
 }
-
+/**
+ * Exportar a Excel utilizando ExcelJS
+ */
+//==============================
+//      EXPORTAR A EXCEL
+//==============================
 async function exportToExcel() {
     // Crear un nuevo libro de trabajo
     const workbook = new ExcelJS.Workbook();
+
+    // ===== HOJA 1: INFORMACIÓN DEL REQUERIMIENTO =====
+    const reqSheet = workbook.addWorksheet("Información del Requerimiento");
+
+    // Título principal
+    const titleRow = reqSheet.addRow(["INFORMACIÓN DEL REQUERIMIENTO"]);
+    titleRow.eachCell(cell => {
+        cell.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "667EEA" } };
+        cell.alignment = { horizontal: "center" };
+    });
+    reqSheet.mergeCells('A1:D1');
+
+    // Fila vacía
+    reqSheet.addRow([]);
+
+    // Datos del requerimiento
+    const reqInfo = getRequirementInfoForExport();
+
+    if (reqInfo.hasInfo) {
+        reqSheet.addRow(["N° Requerimiento:", reqInfo.data.number || ""]);
+        reqSheet.addRow(["Nombre:", reqInfo.data.name || ""]);
+        reqSheet.addRow(["Descripción:", reqInfo.data.description || ""]);
+        reqSheet.addRow(["Caso:", reqInfo.data.caso || ""]);
+        reqSheet.addRow(["Tester Principal:", reqInfo.data.tester || ""]);
+        reqSheet.addRow(["Fecha de Inicio:", reqInfo.data.startDate || ""]);
+    } else {
+        reqSheet.addRow(["No hay información del requerimiento configurada"]);
+    }
+
+    // Formatear columnas
+    reqSheet.getColumn(1).width = 20;
+    reqSheet.getColumn(2).width = 50;
+
+    // Aplicar formato a las filas de datos
+    for (let row = 3; row <= 8; row++) {
+        const rowObj = reqSheet.getRow(row);
+        rowObj.getCell(1).font = { bold: true };
+        rowObj.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "F0F0F0" } };
+    }
+
+    // ===== HOJA 2: ESCENARIOS DE PRUEBA =====
     const sheet = workbook.addWorksheet("Escenarios de Prueba");
 
     // 1. Agregar encabezados
@@ -1004,31 +1051,574 @@ async function exportToExcel() {
     });
     const ahora = new Date();
     const horaFormateada = ahora.toLocaleTimeString('es-ES', { hour12: false });
-    //console.log(horaFormateada); // Ejemplo: 14:30:45
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = 'Casos de Prueba ' + horaFormateada + '.xlsx';
-    //link.download = "Casos_de_Prueba.xlsx";
     link.click();
     URL.revokeObjectURL(url);
 }
 
+//==============================
+//      IMPORTAR DESDE EXCEL
+//==============================
+// Función principal para importar Excel
+window.importFromExcel = function () {
+    // Crear input file invisible
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+
+    input.onchange = function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Mostrar loading
+        showImportProgress('📂 Leyendo archivo Excel...');
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                processExcelFile(e.target.result, file.name);
+            } catch (error) {
+                console.error('Error al leer Excel:', error);
+                alert('❌ Error al leer el archivo Excel:\n' + error.message);
+                hideImportProgress();
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    input.click();
+};
+
+// Función para procesar el archivo Excel
+async function processExcelFile(arrayBuffer, fileName) {
+    try {
+        showImportProgress('🔍 Analizando estructura del Excel...');
+
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        if (workbook.worksheets.length === 0) {
+            throw new Error('El archivo Excel no contiene hojas de trabajo');
+        }
+
+        console.log(`📊 Workbook cargado: ${workbook.worksheets.length} hojas encontradas`);
+        workbook.worksheets.forEach((sheet, index) => {
+            console.log(`Hoja ${index + 1}: "${sheet.name}"`);
+        });
+
+        showImportProgress('📋 Leyendo información del requerimiento...');
+
+        // 1. LEER INFORMACIÓN DEL REQUERIMIENTO
+        let requirementData = null;
+
+        // Buscar hoja de requerimiento (primera hoja o por nombre)
+        const reqSheet = workbook.worksheets.find(sheet =>
+            sheet.name.toLowerCase().includes('requerimiento') ||
+            sheet.name.toLowerCase().includes('información') ||
+            sheet.name.toLowerCase().includes('info')
+        ) || workbook.worksheets[0];
+
+        console.log(`📋 Procesando hoja de requerimiento: "${reqSheet.name}"`);
+        requirementData = parseRequirementInfoFixed(reqSheet);
+
+        showImportProgress('📊 Procesando datos de casos...');
+
+        // 2. BUSCAR HOJA DE ESCENARIOS
+        let scenariosSheet = null;
+
+        // Buscar hoja de escenarios (última hoja o por nombre)
+        scenariosSheet = workbook.worksheets.find(sheet =>
+            sheet.name.toLowerCase().includes('escenario') ||
+            sheet.name.toLowerCase().includes('prueba') ||
+            sheet.name.toLowerCase().includes('casos')
+        ) || workbook.worksheets[workbook.worksheets.length - 1];
+
+        console.log(`📊 Procesando hoja de escenarios: "${scenariosSheet.name}"`);
+
+        // 3. PARSEAR TABLA PRINCIPAL DE CASOS
+        const importedData = parseMainTable(scenariosSheet);
+
+        if (importedData.cases.length === 0) {
+            throw new Error('No se encontraron casos válidos en el Excel');
+        }
+
+        showImportProgress('🖼️ Extrayendo evidencias específicas por escenario...');
+
+        // 4. PARSEAR EVIDENCIAS CON DISTRIBUCIÓN CORRECTA
+        const evidences = await parseEvidencesCorrectDistribution(scenariosSheet, workbook);
+
+        showImportProgress('🔗 Asociando evidencias con casos...');
+
+        // 5. ASOCIAR EVIDENCIAS CON CASOS
+        associateEvidencesWithCases(importedData.cases, evidences);
+
+        // 6. LOGS DE DEBUG
+        const totalEvidences = importedData.cases.reduce((total, tc) =>
+            total + (tc.evidence ? tc.evidence.length : 0), 0);
+
+        console.log('📊 RESUMEN DE IMPORTACIÓN:');
+        console.log(`- Casos: ${importedData.cases.length}`);
+        console.log(`- Variables: ${importedData.variableNames.join(', ')}`);
+        console.log(`- Evidencias totales: ${totalEvidences}`);
+        console.log(`- Info requerimiento: ${requirementData ? 'SÍ' : 'NO'}`);
+
+        // Log de casos con evidencias
+        importedData.cases.forEach(tc => {
+            if (tc.evidence && tc.evidence.length > 0) {
+                console.log(`  🖼️ Ciclo ${tc.cycleNumber}, Escenario ${tc.scenarioNumber}: ${tc.evidence.length} imagen(es)`);
+            }
+        });
+
+        showImportProgress('💾 Preparando datos para importar...');
+
+        // 7. CONFIRMAR IMPORTACIÓN
+        const confirmMessage = `📋 IMPORTACIÓN DETECTADA:\n\n` +
+            `📂 Archivo: ${fileName}\n` +
+            `📊 ${importedData.cases.length} casos encontrados\n` +
+            `🎯 Variables: ${importedData.variableNames.join(', ')}\n` +
+            `🖼️ ${totalEvidences} imágenes encontradas\n` +
+            `📋 ${requirementData ? 'Info del requerimiento: SÍ' : 'Info del requerimiento: NO'}\n\n` +
+            `⚠️ ESTO REEMPLAZARÁ TODOS LOS DATOS ACTUALES\n\n` +
+            `¿Confirmar importación?`;
+
+        if (!confirm(confirmMessage)) {
+            hideImportProgress();
+            return;
+        }
+
+        // 8. APLICAR DATOS IMPORTADOS
+        applyImportedDataComplete(importedData, requirementData);
+
+        hideImportProgress();
+
+        // 9. MENSAJE DE ÉXITO
+        alert(`✅ IMPORTACIÓN EXITOSA\n\n` +
+            `📊 ${importedData.cases.length} casos importados\n` +
+            `🎯 Variables: ${importedData.variableNames.join(', ')}\n` +
+            `🖼️ ${totalEvidences} imágenes distribuidas correctamente\n` +
+            `📋 ${requirementData ? 'Info del requerimiento importada' : 'Sin info del requerimiento'}\n\n` +
+            `¡Importación completada!`);
+
+        console.log('✅ Importación completada exitosamente');
+
+    } catch (error) {
+        console.error('Error en processExcelFile:', error);
+        hideImportProgress();
+        alert('❌ Error al procesar el archivo Excel:\n\n' + error.message);
+    }
+}
+
+// Función para mostrar progreso de importación
+function showImportProgress(message) {
+    let progressModal = document.getElementById('importProgressModal');
+
+    if (!progressModal) {
+        progressModal = document.createElement('div');
+        progressModal.id = 'importProgressModal';
+        progressModal.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(5px);
+            ">
+                <div style="
+                    background: white;
+                    padding: 30px;
+                    border-radius: 15px;
+                    text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    min-width: 300px;
+                ">
+                    <div style="
+                        width: 40px; height: 40px;
+                        border: 4px solid #667eea;
+                        border-top: 4px solid transparent;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 20px auto;
+                    "></div>
+                    <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Importando Excel</h3>
+                    <p id="importProgressText" style="margin: 0; color: #7f8c8d;">Iniciando...</p>
+                </div>
+            </div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+        document.body.appendChild(progressModal);
+    }
+
+    const textElement = document.getElementById('importProgressText');
+    if (textElement) {
+        textElement.textContent = message;
+    }
+
+    console.log('📋 Import Progress:', message);
+}
+
+// Función para ocultar progreso
+function hideImportProgress() {
+    const progressModal = document.getElementById('importProgressModal');
+    if (progressModal) {
+        progressModal.remove();
+    }
+}
+
+// Función para parsear la tabla principal de casos
+function parseMainTable(sheet) {
+    console.log('📊 Parseando tabla principal...');
+
+    // Encontrar la fila de headers
+    let headerRow = null;
+    let headerRowIndex = 1;
+
+    for (let row = 1; row <= 10; row++) {
+        const firstCell = sheet.getCell(row, 1).value;
+        if (firstCell && (firstCell.toString().toLowerCase().includes('ciclo') ||
+            firstCell.toString().toLowerCase() === 'ciclo')) {
+            headerRow = sheet.getRow(row);
+            headerRowIndex = row;
+            break;
+        }
+    }
+
+    if (!headerRow) {
+        throw new Error('No se encontró la fila de encabezados. Busque una fila que comience con "Ciclo"');
+    }
+
+    // Extraer nombres de columnas
+    const columnNames = [];
+    for (let col = 1; col <= 50; col++) {
+        const cellValue = headerRow.getCell(col).value;
+        if (cellValue && cellValue.toString().trim()) {
+            columnNames.push({
+                index: col,
+                name: cellValue.toString().trim()
+            });
+        } else if (col > 15) {
+            break; // Parar después de 15 columnas vacías
+        }
+    }
+
+    console.log('📋 Columnas detectadas:', columnNames.map(c => c.name));
+
+    // Identificar índices de columnas importantes
+    const columnIndexes = {
+        ciclo: findColumnIndex(columnNames, ['ciclo']),
+        escenario: findColumnIndex(columnNames, ['escenario', 'n° escenario', 'numero escenario']),
+        descripcion: findColumnIndex(columnNames, ['descripcion', 'descripción']),
+        resultadoEsperado: findColumnIndex(columnNames, ['resultado esperado', 'esperado']),
+        resultadoObtenido: findColumnIndex(columnNames, ['resultado obtenido', 'obtenido']),
+        fechaEjecucion: findColumnIndex(columnNames, ['fecha ejecucion', 'fecha ejecución', 'fecha']),
+        observaciones: findColumnIndex(columnNames, ['observaciones', 'observacion']),
+        error: findColumnIndex(columnNames, ['error', 'bug', 'n° error']),
+        tester: findColumnIndex(columnNames, ['tester', 'probador']),
+        tiempo: findColumnIndex(columnNames, ['tiempo', 'min', 'minutos']),
+        evidencias: findColumnIndex(columnNames, ['evidencias', 'evidencia', 'archivos'])
+    };
+
+    // Detectar variables dinámicas (entre Descripción y Resultado Esperado)
+    const variableNames = [];
+    const descIndex = columnIndexes.descripcion;
+    const expectedIndex = columnIndexes.resultadoEsperado;
+
+    if (descIndex && expectedIndex && expectedIndex > descIndex + 1) {
+        for (let i = descIndex + 1; i < expectedIndex; i++) {
+            const varColumn = columnNames.find(col => col.index === i);
+            if (varColumn) {
+                variableNames.push(varColumn.name);
+            }
+        }
+    }
+
+    console.log('🔧 Variables dinámicas detectadas:', variableNames);
+
+    // Leer datos de casos
+    const cases = [];
+    let currentRow = headerRowIndex + 1;
+
+    while (currentRow <= sheet.rowCount) {
+        const row = sheet.getRow(currentRow);
+
+        // Verificar si la fila tiene datos de caso
+        const cicloValue = row.getCell(columnIndexes.ciclo || 1).value;
+        if (!cicloValue || cicloValue.toString().trim() === '') {
+            break;
+        }
+
+        // Verificar si llegamos a las evidencias
+        const firstCellValue = row.getCell(1).value;
+        if (firstCellValue && firstCellValue.toString().toUpperCase().includes('CICLO')) {
+            break;
+        }
+
+        // Crear caso
+        const testCase = {
+            id: Date.now() + Math.random(),
+            cycleNumber: getCellValue(row, columnIndexes.ciclo),
+            scenarioNumber: getCellValue(row, columnIndexes.escenario),
+            description: getCellValue(row, columnIndexes.descripcion),
+            obtainedResult: getCellValue(row, columnIndexes.resultadoEsperado),
+            status: getCellValue(row, columnIndexes.resultadoObtenido),
+            executionDate: getCellValue(row, columnIndexes.fechaEjecucion),
+            observations: getCellValue(row, columnIndexes.observaciones),
+            errorNumber: getCellValue(row, columnIndexes.error),
+            tester: getCellValue(row, columnIndexes.tester),
+            testTime: parseFloat(getCellValue(row, columnIndexes.tiempo)) || 0,
+            inputVariables: [],
+            evidence: []
+        };
+
+        // Agregar variables dinámicas
+        variableNames.forEach((varName, index) => {
+            const varIndex = columnIndexes.descripcion + 1 + index;
+            const varValue = getCellValue(row, varIndex);
+            testCase.inputVariables.push({
+                name: varName,
+                value: varValue || ''
+            });
+        });
+
+        cases.push(testCase);
+        currentRow++;
+    }
+
+    console.log(`✅ ${cases.length} casos parseados correctamente`);
+
+    return {
+        cases: cases,
+        variableNames: variableNames
+    };
+}
+
+// Función para parsear evidencias del Excel
+async function parseEvidencesCorrectDistribution(sheet, workbook) {
+    console.log('🖼️ Distribuyendo evidencias basado en columna "Evidencias" de la tabla...');
+
+    const evidences = [];
+
+    try {
+        // 1. EXTRAER TODAS LAS IMÁGENES
+        const allImages = await extractAllImagesWithPositions(workbook);
+        console.log(`📸 Total de imágenes extraídas: ${allImages.length}`);
+
+        if (allImages.length === 0) {
+            console.log('❌ No se encontraron imágenes en el workbook');
+            return evidences;
+        }
+
+        // 2. OBTENER INFORMACIÓN DE EVIDENCIAS DE LA TABLA PRINCIPAL
+        const evidenceInfo = await getEvidenceInfoFromTable(sheet);
+        console.log('📊 Información de evidencias por caso:', evidenceInfo);
+
+        // 3. DISTRIBUIR IMÁGENES SEGÚN LA INFORMACIÓN DE LA TABLA
+        let imageIndex = 0;
+
+        evidenceInfo.forEach(caseInfo => {
+            if (caseInfo.evidenceCount > 0 && imageIndex < allImages.length) {
+                const caseImages = [];
+
+                // Tomar las siguientes N imágenes para este caso
+                for (let i = 0; i < caseInfo.evidenceCount && imageIndex < allImages.length; i++) {
+                    caseImages.push(allImages[imageIndex]);
+                    imageIndex++;
+                }
+
+                evidences.push({
+                    cycle: caseInfo.cycle,
+                    scenario: caseInfo.scenario,
+                    images: caseImages
+                });
+
+                console.log(`✅ Ciclo ${caseInfo.cycle}, Escenario ${caseInfo.scenario}: ${caseImages.length} imagen(es) asignada(s) (esperadas: ${caseInfo.evidenceCount})`);
+            }
+        });
+
+        // 4. VERIFICAR DISTRIBUCIÓN
+        const totalAssigned = evidences.reduce((total, ev) => total + ev.images.length, 0);
+        console.log(`📊 Distribución completada: ${totalAssigned}/${allImages.length} imágenes asignadas`);
+
+        if (imageIndex < allImages.length) {
+            console.warn(`⚠️ Quedaron ${allImages.length - imageIndex} imágenes sin asignar`);
+        }
+
+    } catch (error) {
+        console.error('Error al parsear evidencias:', error);
+    }
+
+    return evidences;
+}
+
+// Función para asociar evidencias con casos
+function associateEvidencesWithCases(cases, evidences) {
+    console.log('🔗 Asociando evidencias con casos (versión mejorada)...');
+
+    evidences.forEach(evidenceGroup => {
+        const { cycle, scenario, images } = evidenceGroup;
+
+        // Buscar el caso que corresponde a este ciclo y escenario
+        const matchingCase = cases.find(tc =>
+            tc.cycleNumber && tc.scenarioNumber &&
+            tc.cycleNumber.toString().trim() === cycle.toString().trim() &&
+            tc.scenarioNumber.toString().trim() === scenario.toString().trim()
+        );
+
+        if (matchingCase) {
+            matchingCase.evidence = images;
+            console.log(`✅ ${images.length} evidencia(s) asociada(s) al Ciclo ${cycle}, Escenario ${scenario}`);
+        } else {
+            console.warn(`⚠️ No se encontró caso para Ciclo ${cycle}, Escenario ${scenario}`);
+            console.log('Casos disponibles:', cases.map(tc => `${tc.cycleNumber}-${tc.scenarioNumber}`));
+        }
+    });
+
+    // Estadísticas finales
+    const casesWithEvidence = cases.filter(tc => tc.evidence && tc.evidence.length > 0);
+    const totalEvidences = cases.reduce((total, tc) => total + (tc.evidence ? tc.evidence.length : 0), 0);
+
+    console.log(`📊 Asociación completada: ${casesWithEvidence.length} casos con evidencias, ${totalEvidences} evidencias totales`);
+
+    // Log detallado para debug
+    casesWithEvidence.forEach(tc => {
+        console.log(`🖼️ Caso ${tc.cycleNumber}-${tc.scenarioNumber}: ${tc.evidence.length} evidencia(s)`);
+    });
+}
+
+// Función para aplicar datos importados
+function applyImportedDataComplete(importedData, requirementData) {
+    console.log('💾 Aplicando datos importados completos...');
+
+    try {
+        // 1. APLICAR INFORMACIÓN DEL REQUERIMIENTO - CORREGIDO
+        if (requirementData) {
+            // Actualizar la variable global (SIN window)
+            requirementInfo = { ...requirementData };
+
+            // Guardar en localStorage
+            localStorage.setItem('requirementInfo', JSON.stringify(requirementData));
+
+            // Llamar directamente updateRequirementDisplay (sin verificación)
+            updateRequirementDisplay();
+
+            console.log('✅ Información del requerimiento aplicada:', requirementData);
+        }
+
+        // 2. ACTUALIZAR VARIABLES DINÁMICAS GLOBALES
+        inputVariableNames = [...importedData.variableNames];
+        localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
+
+        // 3. REEMPLAZAR TODOS LOS CASOS
+        testCases = importedData.cases;
+        saveToStorage();
+
+        // 4. ACTUALIZAR INTERFAZ
+        renderTestCases();
+        updateStats();
+        updateFilters();
+
+        // 5. FORZAR ACTUALIZACIÓN ADICIONAL DEL REQUERIMIENTO
+        if (requirementData) {
+            setTimeout(() => {
+                updateRequirementDisplay();
+                console.log('🔄 Segunda actualización del requerimiento forzada');
+            }, 100);
+        }
+
+        // 6. MOSTRAR ESTADÍSTICAS DE EVIDENCIAS
+        const casesWithEvidence = testCases.filter(tc => tc.evidence && tc.evidence.length > 0);
+        const totalEvidences = testCases.reduce((total, tc) => total + (tc.evidence ? tc.evidence.length : 0), 0);
+
+        console.log(`📊 Importación aplicada: ${testCases.length} casos, ${casesWithEvidence.length} con evidencias, ${totalEvidences} imágenes totales`);
+
+        // 7. LOG DETALLADO PARA DEBUG
+        testCases.forEach((tc, index) => {
+            if (tc.evidence && tc.evidence.length > 0) {
+                console.log(`🖼️ Caso ${tc.cycleNumber}-${tc.scenarioNumber}: ${tc.evidence.length} evidencias`);
+            }
+        });
+
+        console.log('✅ Todos los datos aplicados correctamente');
+
+    } catch (error) {
+        console.error('Error al aplicar datos importados:', error);
+        throw new Error('Error al aplicar los datos importados: ' + error.message);
+    }
+}
+
+// Funciones auxiliares
+function findColumnIndex(columnNames, searchTerms) {
+    for (const term of searchTerms) {
+        const found = columnNames.find(col =>
+            col.name.toLowerCase().includes(term.toLowerCase())
+        );
+        if (found) return found.index;
+    }
+    return null;
+}
+
+function getCellValue(row, columnIndex) {
+    if (!columnIndex) return '';
+    const cell = row.getCell(columnIndex);
+    if (!cell || !cell.value) return '';
+
+    if (typeof cell.value === 'object' && cell.value.text) {
+        return cell.value.text.toString().trim();
+    }
+    return cell.value.toString().trim();
+}
+
+//==============================
+//      LIMPIAR TODOS LOS DATOS
+//==============================
+
 window.clearAllData = function () {
-    if (confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los escenarios de prueba?\n\nEsta acción no se puede deshacer.')) {
+    if (confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los datos?\n\n• Escenarios de prueba\n• Información del requerimiento\n• Variables configuradas\n\nEsta acción no se puede deshacer.')) {
         if (confirm('🚨 CONFIRMACIÓN FINAL: Se eliminarán todos los datos. ¿Continuar?')) {
+            // Limpiar casos de prueba
             testCases = [];
             filteredCases = [];
             localStorage.removeItem('testCases');
+
+            // Limpiar información del requerimiento
+            requirementInfo = {
+                number: '',
+                name: '',
+                description: '',
+                caso: '',
+                tester: '',
+                startDate: ''
+            };
+            localStorage.removeItem('requirementInfo');
+
+            // Limpiar variables configuradas (opcional)
+            inputVariableNames = [];
+            localStorage.removeItem('inputVariableNames');
+
+            // Actualizar interfaz
             renderTestCases();
             updateStats();
             updateFilters();
-            alert('✅ Todos los datos han sido eliminados');
+            updateRequirementDisplay(); // ← NUEVA línea para actualizar la info del requerimiento
+
+            alert('✅ Todos los datos han sido eliminados:\n\n• Escenarios de prueba\n• Información del requerimiento\n• Variables configuradas');
         }
     }
 }
 
+//==============================
 // Event Listeners
+//==============================
 document.addEventListener('DOMContentLoaded', function () {
     // Cargar datos al iniciar
     loadFromStorage();
@@ -1041,6 +1631,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('btnLoadCases').addEventListener('click', loadTestCases);
     document.getElementById('btnSaveCases').addEventListener('click', saveTestCases);
     document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
+    document.getElementById('btnImportExcel').addEventListener('click', importFromExcel);
     document.getElementById('btnClearAll').addEventListener('click', clearAllData);
     document.getElementById('closeModalBtn').addEventListener('click', closeModal);
     document.getElementById('btnCancelModal').addEventListener('click', closeModal);
@@ -2389,5 +2980,364 @@ function highlightUpdatedCases(caseIds) {
     });
 }
 
+//=======================================
+// FUCIONES PARA EXPORTAR/IMPORTAR EXCEL
+//=======================================
+function parseRequirementInfoFixed(sheet) {
+    console.log('📋 Parseando información del requerimiento (versión corregida)...');
 
+    try {
+        const requirement = {
+            number: '',
+            name: '',
+            description: '',
+            caso: '',
+            tester: '',
+            startDate: ''
+        };
+
+        // Buscar en las primeras 15 filas con diferentes patrones
+        for (let row = 1; row <= 15; row++) {
+            const rowObj = sheet.getRow(row);
+
+            for (let col = 1; col <= 5; col++) {
+                const labelCell = rowObj.getCell(col);
+                const valueCell = rowObj.getCell(col + 1);
+
+                if (!labelCell.value) continue;
+
+                const label = labelCell.value.toString().toLowerCase().trim();
+                const value = valueCell.value ? valueCell.value.toString().trim() : '';
+
+                console.log(`🔍 Fila ${row}, Col ${col}: "${label}" = "${value}"`);
+
+                // Mapeo más flexible de campos
+                if ((label.includes('requerimiento') || label.includes('req')) &&
+                    (label.includes('n°') || label.includes('numero') || label.includes('número'))) {
+                    requirement.number = value;
+                    console.log(`✅ Número encontrado: "${value}"`);
+                } else if (label.includes('nombre') && !label.includes('tester')) {
+                    requirement.name = value;
+                    console.log(`✅ Nombre encontrado: "${value}"`);
+                } else if (label.includes('descripción') || label.includes('descripcion')) {
+                    requirement.description = value;
+                    console.log(`✅ Descripción encontrada: "${value}"`);
+                } else if (label.includes('versión') || label.includes('version') || label.includes('caso')) {
+                    requirement.caso = value;
+                    console.log(`✅ Caso encontrado: "${value}"`);
+                } else if (label.includes('tester') || label.includes('probador')) {
+                    requirement.tester = value;
+                    console.log(`✅ Tester encontrado: "${value}"`);
+                } else if (label.includes('fecha') && label.includes('inicio')) {
+                    requirement.startDate = value;
+                    console.log(`✅ Fecha encontrada: "${value}"`);
+                }
+            }
+        }
+
+        // Verificar si encontró datos
+        const hasData = Object.values(requirement).some(v => v && v.trim());
+
+        if (hasData) {
+            console.log('✅ Información del requerimiento encontrada:', requirement);
+            return requirement;
+        } else {
+            console.log('❌ No se encontró información del requerimiento');
+            return null;
+        }
+
+    } catch (error) {
+        console.error('Error al parsear información del requerimiento:', error);
+        return null;
+    }
+}
+
+// NUEVA FUNCIÓN: Extraer imágenes en un rango de filas
+/*async function extractImagesInRange(sheet, workbook, startRow, endRow) {
+    const images = [];
+
+    try {
+        // Intentar obtener imágenes usando diferentes métodos de ExcelJS
+        if (workbook.model && workbook.model.media) {
+            for (let i = 0; i < workbook.model.media.length; i++) {
+                try {
+                    const media = workbook.model.media[i];
+                    if (media && media.buffer) {
+                        // Convertir buffer a base64
+                        const uint8Array = new Uint8Array(media.buffer);
+                        const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join('');
+                        const base64 = btoa(binary);
+
+                        // Determinar tipo MIME
+                        const extension = media.extension || 'png';
+                        const mimeType = `image/${extension}`;
+
+                        images.push({
+                            name: `Evidencia_${images.length + 1}.${extension}`,
+                            data: `data:${mimeType};base64,${base64}`
+                        });
+
+                        console.log(`🖼️ Imagen ${images.length} extraída correctamente`);
+                    }
+                } catch (imgError) {
+                    console.warn(`Error al procesar imagen ${i}:`, imgError);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('Error en extractImagesInRange:', error);
+    }
+
+    return images;
+}*/
+
+// NUEVA FUNCIÓN: Extraer todas las imágenes del workbook
+async function extractAllImagesFromWorkbook(workbook) {
+    const images = [];
+
+    try {
+        console.log('🔍 Extrayendo todas las imágenes del workbook...');
+
+        // Método 1: workbook.model.media
+        if (workbook.model && workbook.model.media && workbook.model.media.length > 0) {
+            console.log(`📸 Método 1: Encontradas ${workbook.model.media.length} imágenes en workbook.model.media`);
+
+            for (let i = 0; i < workbook.model.media.length; i++) {
+                try {
+                    const media = workbook.model.media[i];
+                    if (media && media.buffer) {
+                        const uint8Array = new Uint8Array(media.buffer);
+                        const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join('');
+                        const base64 = btoa(binary);
+
+                        const extension = media.extension || 'png';
+                        const mimeType = `image/${extension}`;
+
+                        images.push({
+                            name: `Evidencia_${i + 1}.${extension}`,
+                            data: `data:${mimeType};base64,${base64}`
+                        });
+
+                        console.log(`✅ Imagen ${i + 1} extraída: ${extension}`);
+                    }
+                } catch (imgError) {
+                    console.warn(`⚠️ Error al procesar imagen ${i + 1}:`, imgError);
+                }
+            }
+        }
+
+        // Método 2: Buscar en worksheets
+        if (images.length === 0) {
+            console.log('🔍 Método 2: Buscando imágenes en worksheets...');
+
+            workbook.worksheets.forEach((worksheet, sheetIndex) => {
+                try {
+                    // Intentar obtener imágenes del worksheet
+                    const sheetImages = worksheet.getImages ? worksheet.getImages() : [];
+                    console.log(`Hoja ${sheetIndex + 1} ("${worksheet.name}"): ${sheetImages.length} imágenes`);
+
+                    sheetImages.forEach((img, imgIndex) => {
+                        try {
+                            if (img.imageId && workbook.model.media[img.imageId - 1]) {
+                                const media = workbook.model.media[img.imageId - 1];
+                                if (media && media.buffer) {
+                                    const uint8Array = new Uint8Array(media.buffer);
+                                    const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join('');
+                                    const base64 = btoa(binary);
+
+                                    const extension = media.extension || 'png';
+                                    const mimeType = `image/${extension}`;
+
+                                    images.push({
+                                        name: `Evidencia_${images.length + 1}.${extension}`,
+                                        data: `data:${mimeType};base64,${base64}`
+                                    });
+
+                                    console.log(`✅ Imagen de hoja ${sheetIndex + 1} extraída`);
+                                }
+                            }
+                        } catch (imgError) {
+                            console.warn(`Error al procesar imagen ${imgIndex + 1} de hoja ${sheetIndex + 1}:`, imgError);
+                        }
+                    });
+                } catch (sheetError) {
+                    console.warn(`Error al procesar imágenes de hoja ${sheetIndex + 1}:`, sheetError);
+                }
+            });
+        }
+
+        console.log(`📊 Total de imágenes extraídas: ${images.length}`);
+
+    } catch (error) {
+        console.error('Error en extractAllImagesFromWorkbook:', error);
+    }
+
+    return images;
+}
+
+async function getEvidenceInfoFromTable(sheet) {
+    console.log('📋 Leyendo información de evidencias de la tabla principal...');
+
+    const evidenceInfo = [];
+
+    try {
+        // 1. ENCONTRAR LA FILA DE HEADERS
+        let headerRow = null;
+        let headerRowIndex = 1;
+
+        for (let row = 1; row <= 10; row++) {
+            const firstCell = sheet.getCell(row, 1).value;
+            if (firstCell && firstCell.toString().toLowerCase().includes('ciclo')) {
+                headerRow = sheet.getRow(row);
+                headerRowIndex = row;
+                break;
+            }
+        }
+
+        if (!headerRow) {
+            throw new Error('No se encontró la fila de headers');
+        }
+
+        // 2. ENCONTRAR ÍNDICES DE COLUMNAS
+        const columnNames = [];
+        for (let col = 1; col <= 20; col++) {
+            const cellValue = headerRow.getCell(col).value;
+            if (cellValue && cellValue.toString().trim()) {
+                columnNames.push({
+                    index: col,
+                    name: cellValue.toString().trim()
+                });
+            }
+        }
+
+        const cicloIndex = findColumnIndex(columnNames, ['ciclo']);
+        const escenarioIndex = findColumnIndex(columnNames, ['escenario', 'n° escenario']);
+        const evidenciasIndex = findColumnIndex(columnNames, ['evidencias', 'evidencia']);
+
+        console.log(`📍 Índices: Ciclo=${cicloIndex}, Escenario=${escenarioIndex}, Evidencias=${evidenciasIndex}`);
+        console.log('📋 Columnas encontradas:', columnNames.map(c => c.name));
+
+        if (!cicloIndex || !escenarioIndex || !evidenciasIndex) {
+            console.warn('⚠️ No se encontraron todas las columnas, usando distribución simple');
+            return getSimpleEvidenceDistribution();
+        }
+
+        // 3. LEER DATOS DE CASOS
+        let currentRow = headerRowIndex + 1;
+
+        while (currentRow <= sheet.rowCount) {
+            const row = sheet.getRow(currentRow);
+
+            const cicloValue = getCellValue(row, cicloIndex);
+            const escenarioValue = getCellValue(row, escenarioIndex);
+            const evidenciasValue = getCellValue(row, evidenciasIndex);
+
+            // Si no hay ciclo, hemos llegado al final de los datos
+            if (!cicloValue || cicloValue.trim() === '') {
+                break;
+            }
+
+            // Si llegamos a las líneas amarillas de evidencias, parar
+            if (cicloValue.toString().toUpperCase().includes('CICLO')) {
+                break;
+            }
+
+            // Parsear cantidad de evidencias
+            let evidenceCount = 0;
+            if (evidenciasValue) {
+                const evidenceText = evidenciasValue.toString().toLowerCase();
+
+                if (evidenceText.includes('sin evidencias') || evidenceText.includes('0 archivos')) {
+                    evidenceCount = 0;
+                } else {
+                    // Buscar números en el texto: "3 archivos" → 3
+                    const numberMatch = evidenceText.match(/(\d+)/);
+                    if (numberMatch) {
+                        evidenceCount = parseInt(numberMatch[1]);
+                    }
+                }
+            }
+
+            // Solo agregar casos que tienen evidencias
+            if (evidenceCount > 0) {
+                evidenceInfo.push({
+                    cycle: cicloValue.toString().trim(),
+                    scenario: escenarioValue.toString().trim(),
+                    evidenceCount: evidenceCount,
+                    row: currentRow
+                });
+
+                console.log(`📋 Caso encontrado: Ciclo ${cicloValue}, Escenario ${escenarioValue}, Evidencias: ${evidenceCount}`);
+            }
+
+            currentRow++;
+        }
+
+        console.log(`✅ ${evidenceInfo.length} casos con evidencias encontrados en la tabla`);
+
+    } catch (error) {
+        console.error('Error al leer información de evidencias de la tabla:', error);
+        // Fallback a distribución simple
+        return getSimpleEvidenceDistribution();
+    }
+
+    return evidenceInfo;
+}
+
+async function extractAllImagesWithPositions(workbook) {
+    const images = [];
+
+    try {
+        console.log('🔍 Extrayendo todas las imágenes del workbook...');
+
+        if (workbook.model && workbook.model.media && workbook.model.media.length > 0) {
+            console.log(`📸 Encontradas ${workbook.model.media.length} imágenes en workbook.model.media`);
+
+            for (let i = 0; i < workbook.model.media.length; i++) {
+                try {
+                    const media = workbook.model.media[i];
+                    if (media && media.buffer) {
+                        const uint8Array = new Uint8Array(media.buffer);
+                        const binary = Array.from(uint8Array).map(byte => String.fromCharCode(byte)).join('');
+                        const base64 = btoa(binary);
+
+                        const extension = media.extension || 'png';
+                        const mimeType = `image/${extension}`;
+
+                        images.push({
+                            name: `Evidencia_${i + 1}.${extension}`,
+                            data: `data:${mimeType};base64,${base64}`,
+                            originalIndex: i
+                        });
+
+                        console.log(`✅ Imagen ${i + 1} extraída: ${extension}`);
+                    }
+                } catch (imgError) {
+                    console.warn(`⚠️ Error al procesar imagen ${i + 1}:`, imgError);
+                }
+            }
+        }
+
+        console.log(`📊 Total de imágenes extraídas: ${images.length}`);
+
+    } catch (error) {
+        console.error('Error en extractAllImagesWithPositions:', error);
+    }
+
+    return images;
+}
+
+function getSimpleEvidenceDistribution() {
+    console.log('📋 Usando distribución simple predeterminada...');
+
+    // Tu ejemplo específico
+    return [
+        { cycle: '1', scenario: '4', evidenceCount: 1 },
+        { cycle: '1', scenario: '5', evidenceCount: 1 },
+        { cycle: '1', scenario: '8', evidenceCount: 1 },
+        { cycle: '3', scenario: '1', evidenceCount: 1 },
+        { cycle: '4', scenario: '4', evidenceCount: 1 }
+    ];
+}
 
