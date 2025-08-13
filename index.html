@@ -6,35 +6,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casos de Prueba</title>
     <link rel="manifest" href="manifest.json">
-    <div class="theme-switch">
-        <label class="switch">
-            <input type="checkbox" id="themeToggle">
-            <span class="slider"></span>
-        </label>
-        <span id="themeLabel">Modo Claro</span>
-    </div>
     <link rel="stylesheet" href="styles.css">
-
 </head>
 
 <body>
     <div class="container">
         <div class="header">
             <h1>📋 Casos de Prueba</h1>
-            <div class="controls">
-                <button class="btn btn-success" id="btnAddCase">➕ Nuevo Escenario</button>
-                <button class="btn btn-info" id="btnLoadCases">📂 Cargar JSON</button>
-                <button class="btn btn-info" id="btnImportExcel">📥 Cargar Excel</button>
-                <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
-                <button class="btn btn-warning" id="btnSaveCases"> { } Guardar JSON</button>
-                <button class="btn btn-warning" id="btnExportExcel">💾 Guardar Excel</button>
-                <button class="btn btn-danger" id="btnClearAll">🗑️ Limpiar Todo</button>
+            
+            <!-- Sistema de Tabs Moderno -->
+            <div class="tab-container">
+                <div class="tab-nav">
+                    <button class="tab-btn tab-active" data-tab="gestion">🏠 Gestión</button>
+                    <button class="tab-btn" data-tab="guardar">💾 Guardar</button>
+                    <button class="tab-btn" data-tab="cargar">📂 Cargar</button>
+                    <button class="tab-btn" data-tab="config">⚙️ Configuración</button>
+                </div>
+
+                <div class="tab-content-container">
+                    <!-- Tab 1: Gestión -->
+                    <div class="tab-content tab-active" id="tab-gestion">
+                        <button class="btn btn-success" id="btnAddCase">➕ Nuevo Escenario</button>
+                        <button class="btn btn-info" id="btnGenerateReport">📊 Generar Reporte</button>
+                    </div>
+
+                    <!-- Tab 2: Guardar -->
+                    <div class="tab-content" id="tab-guardar">
+                        <button class="btn btn-warning" id="btnExportExcel">📊 Guardar Excel</button>
+                        <button class="btn btn-warning" id="btnSaveCases">💾 Guardar JSON</button>
+                    </div>
+
+                    <!-- Tab 3: Cargar -->
+                    <div class="tab-content" id="tab-cargar">
+                        <button class="btn btn-info" id="btnImportExcel">📥 Cargar Excel</button>
+                        <button class="btn btn-info" id="btnLoadCases">📂 Cargar JSON</button>
+                    </div>
+
+                    <!-- Tab 4: Configuración -->
+                    <div class="tab-content" id="tab-config">
+                        <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
+                        
+                        <!-- Switch de Tema aquí -->
+                        <div class="theme-switch-container">
+                            <span class="theme-label">🌓 Tema:</span>
+                            <div class="theme-switch">
+                                <label class="switch">
+                                    <input type="checkbox" id="themeToggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span id="themeLabel">Modo Claro</span>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-info btn-dev-only" id="btnForceUpdate" style="display: none;">🔄 Forzar Update</button>
+                        
+                        <!-- Separador para zona peligrosa -->
+                        <div class="config-separator"></div>
+                        
+                        <button class="btn btn-danger" id="btnClearAll">🗑️ Limpiar Todo</button>
+                    </div>
+                </div>
             </div>
-
-
         </div>
 
-        <!-- Información del Requerimiento -->
+        <!-- InformacIón del Requerimiento -->
         <div class="requirement-info" id="requirementInfo">
             <div class="requirement-card">
                 <div class="requirement-header">
@@ -181,11 +216,12 @@
                 </div>
             </div>
         </div>
-        <!-- Barra de cronómetro persistente (agregar después de .filters) -->
+
+        <!-- Barra de cronómetro persistente -->
         <div id="timerBar" class="timer-active-bar" style="display: none;">
             <div class="timer-bar-content">
                 <div class="timer-info">
-                    <span class="timer-icon">🕐</span>
+                    <span class="timer-icon">🕒</span>
                     <div class="timer-details">
                         <strong id="timerScenario">Escenario --</strong>
                         <span id="timerDescription">--</span>
@@ -199,8 +235,7 @@
             </div>
         </div>
 
-
-        <!-- Toolbar de acciones masivas (aparece cuando hay casos seleccionados) -->
+        <!-- Toolbar de acciones masivas -->
         <div id="bulkActionsToolbar" class="bulk-toolbar" style="display: none;">
             <div class="bulk-toolbar-content">
                 <div class="bulk-info">
@@ -274,6 +309,7 @@
             </div>
         </div>
     </div>
+
     <!-- Modal Configurar Variables -->
     <div id="configVarsModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
@@ -347,8 +383,6 @@
                     <input type="text" id="tester" required>
                 </div>
 
-
-
                 <div class="form-group">
                     <label>Evidencias (Imágenes):</label>
                     <div class="evidence-container">
@@ -374,7 +408,7 @@
             </div>
 
             <div class="bulk-edit-info">
-                <p><strong>🔢 <span id="bulkEditCount">0</span> casos seleccionados</strong></p>
+                <p><strong>📢 <span id="bulkEditCount">0</span> casos seleccionados</strong></p>
                 <p class="bulk-edit-hint">💡 Solo se actualizarán los campos que completes. Los campos vacíos no se
                     modificarán.</p>
             </div>
@@ -433,7 +467,6 @@
         </div>
     </div>
 
-
     <!-- Modal para visualizar evidencias -->
     <div id="evidenceViewModal" class="modal">
         <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
@@ -455,37 +488,54 @@
         <img id="zoomedImage"
             style="display:block;max-width:90vw;max-height:90vh;margin:60px auto 0 auto;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);" />
     </div>
-    <!-- <script src="script.js"></script> -->
+
+    <!-- Modal para Vista Previa del Reporte -->
+    <div id="reportPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div class="modal-header">
+                <h2>📊 Vista Previa del Reporte del Caso</h2>
+                <span class="close" id="closeReportModalBtn">&times;</span>
+            </div>
+            <div id="reportPreviewContent"
+                style="font-family: 'Courier New', monospace; white-space: pre-line; padding: 20px; background: #f8f9fa; border-radius: 8px; overflow-y: auto; max-height: 60vh; line-height: 1.4;">
+                <!-- El contenido del reporte se generará aquí -->
+            </div>
+            <div class="controls" style="margin-top: 20px;">
+                <button class="btn btn-success" id="btnDownloadPDF">📄 Descargar PDF</button>
+                <button class="btn" id="btnCancelReport">❌ Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts en orden correcto -->
     <script src="js/core.js"></script>
-    <script src="js/exportImport.js"></script>   
+    <script src="js/exportImport.js"></script>
     <script src="js/cases.js"></script>
     <script src="js/timers.js"></script>
-    <script src="js/bulk.js"></script>   
-    <script src="js/dragdrop.js"></script>   
+    <script src="js/bulk.js"></script>
+    <script src="js/dragdrop.js"></script>
     <script src="js/ui.js"></script>
-
+    <script src="js/reports.js"></script>
+    
+    <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <script>
-        // 🚀 REGISTRO DEL SERVICE WORKER
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then(registration => {
                         console.log('✅ PWA Auto-Update: Service Worker registrado');
 
-                        // 🔄 ESCUCHAR MENSAJES del Service Worker
                         navigator.serviceWorker.addEventListener('message', event => {
                             if (event.data?.type === 'UPDATE_AVAILABLE') {
                                 console.log('🆕 Actualización detectada automáticamente');
-
-                                // Mostrar notificación de actualización
                                 showUpdateNotification();
-
-                                // Auto-aplicar en 2 segundos (modo desarrollo)
                                 setTimeout(() => {
                                     console.log('🔄 Aplicando actualización automática...');
                                     window.location.reload();
@@ -493,7 +543,6 @@
                             }
                         });
 
-                        // Detectar actualizaciones tradicionales del SW
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             console.log('🆕 Nueva versión del Service Worker detectada');
@@ -501,8 +550,6 @@
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     showUpdateNotification();
-
-                                    // Auto-actualizar después de 2 segundos
                                     setTimeout(() => {
                                         newWorker.postMessage({ type: 'SKIP_WAITING' });
                                         window.location.reload();
@@ -516,58 +563,52 @@
                     });
             });
 
-            // Recargar cuando el SW tome control
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 console.log('🔄 Service Worker actualizado, recargando...');
                 window.location.reload();
             });
         }
 
-        // 🔔 Función para mostrar notificación de actualización
         function showUpdateNotification() {
-            // Crear notificación visual
             const notification = document.createElement('div');
             notification.id = 'updateNotification';
             notification.innerHTML = `
-        <div style="
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
-            z-index: 10000;
-            font-family: 'Segoe UI', sans-serif;
-            font-weight: bold;
-            animation: slideIn 0.3s ease-out;
-        ">
-            🔄 Actualizando aplicación...
-        </div>
-        <style>
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        </style>
-    `;
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+                    z-index: 10000;
+                    font-family: 'Segoe UI', sans-serif;
+                    font-weight: bold;
+                    animation: slideIn 0.3s ease-out;
+                ">
+                    🔄 Actualizando aplicación...
+                </div>
+                <style>
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                </style>
+            `;
 
             document.body.appendChild(notification);
 
-            // Remover después de 3 segundos
             setTimeout(() => {
                 if (document.getElementById('updateNotification')) {
                     document.getElementById('updateNotification').remove();
                 }
             }, 3000);
 
-            console.log('🔔 Notificación de actualización mostrada');
+            console.log('📢 Notificación de actualización mostrada');
         }
 
-        // 🛠️ OPCIONAL: Botón manual para forzar actualización (para desarrollo)
         document.addEventListener('DOMContentLoaded', function () {
-            // Solo agregar botón en modo desarrollo
             const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
             if (isDev) {
@@ -575,13 +616,13 @@
                 devButton.className = 'btn btn-info btn-small';
                 devButton.innerHTML = '🔄 Forzar Update';
                 devButton.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            font-size: 12px;
-            padding: 8px 12px;
-        `;
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                    font-size: 12px;
+                    padding: 8px 12px;
+                `;
 
                 devButton.onclick = async function () {
                     console.log('🔄 Forzando actualización manual...');

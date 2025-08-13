@@ -290,7 +290,7 @@ window.applyBulkEdit = function (formData) {
     }
 
     if (formData.executionDate) {
-        changes.executionDate = formData.executionDate;
+        changes.executionDate = formatDateForStorage(formData.executionDate);
     }
 
     if (formData.observations.trim()) {

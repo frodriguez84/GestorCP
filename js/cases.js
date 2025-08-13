@@ -132,7 +132,7 @@ window.openEditModal = function (id) {
     document.getElementById('description').value = testCase.description || '';
     document.getElementById('obtainedResult').value = testCase.obtainedResult || '';
     document.getElementById('status').value = testCase.status || '';
-    document.getElementById('executionDate').value = testCase.executionDate || '';
+    document.getElementById('executionDate').value = formatDateForStorage(testCase.executionDate) || '';
     document.getElementById('observations').value = testCase.observations || '';
     document.getElementById('errorNumber').value = testCase.errorNumber || '';
     document.getElementById('tester').value = testCase.tester || '';
@@ -534,9 +534,9 @@ window.renderTestCases = function () {
                 
                 <!-- Variables dinámicas -->
                 ${inputVariableNames.map(varName => {
-                    const found = (testCase.inputVariables || []).find(v => v.name === varName);
-                    return `<td class="variable-column" style="min-width: 150px; max-width: 150px;">${found ? found.value : ''}</td>`;
-                }).join('')}
+            const found = (testCase.inputVariables || []).find(v => v.name === varName);
+            return `<td class="variable-column" style="min-width: 150px; max-width: 150px;">${found ? found.value : ''}</td>`;
+        }).join('')}
         
                 <td class="col-resultado-esperado">${testCase.obtainedResult || ''}</td>
                 <td>
@@ -546,7 +546,7 @@ window.renderTestCases = function () {
                         <option value="NO" ${testCase.status === 'NO' ? 'selected' : ''}>NO</option>
                     </select>
                 </td>
-                <td class="col-fecha-ejecucion">${testCase.executionDate || ''}</td>
+               <td class="col-fecha-ejecucion">${formatDateForDisplay(testCase.executionDate) || ''}</td>
                 <td class="col-observaciones">${testCase.observations || ''}</td>
                 <td class="col-error">${testCase.errorNumber || ''}</td>
                 <td class="col-tester">${testCase.tester || ''}</td>
@@ -560,8 +560,8 @@ window.renderTestCases = function () {
                 </td>
                 
                 <td class="col-evidencias">${evidenceCount > 0 ?
-                    `<a href="#" onclick="viewEvidence(${testCase.id}); return false;" style="color: #3498db; text-decoration: underline; cursor: pointer;">🔎 ${evidenceCount} archivos</a>` :
-                    'Sin evidencias'}</td>
+                `<a href="#" onclick="viewEvidence(${testCase.id}); return false;" style="color: #3498db; text-decoration: underline; cursor: pointer;">🔎 ${evidenceCount} archivos</a>` :
+                'Sin evidencias'}</td>
                 
                 <td class="action-buttons">
                     <button class="btn btn-info btn-small" onclick="openEditModal(${testCase.id})" title="Editar Escenario">✏️</button>
@@ -680,20 +680,20 @@ window.updateStats = function () {
 // Agregar solo una tarjeta de tiempo total
 function addTotalTimeStatsCard() {
     const statsContainer = document.getElementById('statsContainer');
-    
+
     // Verificar si ya existe la tarjeta de tiempo
     const existingTimeCard = document.getElementById('totalTimeCard');
     if (existingTimeCard) existingTimeCard.remove();
-    
+
     // Limpiar tarjetas antiguas de cuantización si existen
     const oldQuantizedCard = document.getElementById('quantizedTimeCard');
     const oldTimeStatsCard = document.getElementById('timeStatsCard');
     if (oldQuantizedCard) oldQuantizedCard.remove();
     if (oldTimeStatsCard) oldTimeStatsCard.remove();
-    
+
     // Obtener estadísticas de tiempo
     const timeStats = getTimeStatistics();
-    
+
     if (timeStats.casesWithTime > 0) {
         // Tarjeta de tiempo total (única)
         const timeCard = document.createElement('div');
@@ -707,11 +707,11 @@ function addTotalTimeStatsCard() {
         timeCard.title = `${timeStats.totalHours.toFixed(2)} horas en ${timeStats.casesWithTime} casos\nPromedio: ${timeStats.averageTimePerCase.toFixed(2)}h por caso\nClick para ver detalles`;
         timeCard.style.cursor = 'pointer';
         timeCard.onclick = () => showTimeInfo();
-        
+
         // Agregar ícono
         timeCard.style.position = 'relative';
         timeCard.style.overflow = 'hidden';
-        
+
         const icon = document.createElement('div');
         icon.innerHTML = '⏱️';
         icon.style.cssText = `
@@ -722,7 +722,7 @@ function addTotalTimeStatsCard() {
             opacity: 0.7;
         `;
         timeCard.appendChild(icon);
-        
+
         statsContainer.appendChild(timeCard);
     }
 }
@@ -805,6 +805,53 @@ window.toggleShowHidden = function () {
 // ACTUALIZACIÓN DE ESTADO Y FECHA
 // ===============================================
 
+// Función para formatear fecha yyyy-mm-dd a dd-mm-aaaa para mostrar
+function formatDateForDisplay(dateString) {
+    if (!dateString || dateString.trim() === '') return '';
+
+    try {
+        // Si ya está en formato dd-mm-aaaa, devolverlo tal como está
+        if (dateString.includes('/') || (dateString.includes('-') && dateString.split('-')[0].length === 2)) {
+            return dateString;
+        }
+
+        // Convertir de yyyy-mm-dd a dd-mm-aaaa
+        if (dateString.includes('-') && dateString.length === 10) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}-${month}-${year}`;
+        }
+
+        return dateString;
+    } catch (e) {
+        console.error('Error formateando fecha:', e);
+        return dateString;
+    }
+}
+
+// Función para convertir fecha dd-mm-aaaa a yyyy-mm-dd para guardar
+function formatDateForStorage(dateString) {
+    if (!dateString || dateString.trim() === '') return '';
+
+    try {
+        // Si ya está en formato yyyy-mm-dd, devolverlo tal como está
+        if (dateString.includes('-') && dateString.length === 10 && dateString.split('-')[0].length === 4) {
+            return dateString;
+        }
+
+        // Convertir de dd-mm-aaaa a yyyy-mm-dd
+        if (dateString.includes('-') && dateString.split('-')[0].length === 2) {
+            const [day, month, year] = dateString.split('-');
+            return `${year}-${month}-${day}`;
+        }
+
+        return dateString;
+    } catch (e) {
+        console.error('Error convirtiendo fecha:', e);
+        return dateString;
+    }
+}
+
+
 // Funcion para actualizar la fecha al cambiar el resultado obtenido
 window.updateStatusAndDate = function (id, value) {
     const testCase = testCases.find(tc => tc.id === id);
@@ -854,5 +901,12 @@ function initializeHiddenFunctionality() {
 document.addEventListener('DOMContentLoaded', function () {
     setTimeout(initializeHiddenFunctionality, 1000); // Después de que todo se cargue
 });
+
+// ===============================================
+//  FUNCIONES GLOBALES ADICIONALES
+// ===============================================
+
+window.formatDateForDisplay = formatDateForDisplay;
+window.formatDateForStorage = formatDateForStorage;
 
 console.log('✅ cases.js renderizado simplificado - Solo horas y una estadística de tiempo');
