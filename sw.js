@@ -13,8 +13,15 @@ const CORE_FILES = [
   '/',
   '/index.html',
   '/styles.css', 
-  '/script.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/js/core.js',
+  '/js/ui.js',
+  '/js/cases.js',
+  '/js/timers.js',
+  '/js/bulk.js',
+  '/js/dragdrop.js',
+  '/js/exportImport.js',
+  '/js/reports.js',
 ];
 
 // URLs externas (cachear normalmente)
