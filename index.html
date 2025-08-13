@@ -13,7 +13,7 @@
     <div class="container">
         <div class="header">
             <h1>📋 Casos de Prueba</h1>
-            
+
             <!-- Sistema de Tabs Moderno -->
             <div class="tab-container">
                 <div class="tab-nav">
@@ -45,7 +45,7 @@
                     <!-- Tab 4: Configuración -->
                     <div class="tab-content" id="tab-config">
                         <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
-                        
+
                         <!-- Switch de Tema aquí -->
                         <div class="theme-switch-container">
                             <span class="theme-label">🌓 Tema:</span>
@@ -57,12 +57,13 @@
                                 <span id="themeLabel">Modo Claro</span>
                             </div>
                         </div>
-                        
-                        <button class="btn btn-info btn-dev-only" id="btnForceUpdate" style="display: none;">🔄 Forzar Update</button>
-                        
+
+                        <button class="btn btn-info btn-dev-only" id="btnForceUpdate" style="display: none;">🔄 Forzar
+                            Update</button>
+
                         <!-- Separador para zona peligrosa -->
                         <div class="config-separator"></div>
-                        
+
                         <button class="btn btn-danger" id="btnClearAll">🗑️ Limpiar Todo</button>
                     </div>
                 </div>
@@ -506,24 +507,24 @@
             </div>
         </div>
     </div>
-    
-    <!-- Scripts en orden correcto -->
+
+    <!-- Scripts principales -->
     <script src="js/core.js"></script>
-    <script src="js/exportImport.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/cases.js"></script>
     <script src="js/timers.js"></script>
     <script src="js/bulk.js"></script>
     <script src="js/dragdrop.js"></script>
-    <script src="js/ui.js"></script>
+    <script src="js/exportImport.js"></script>
     <script src="js/reports.js"></script>
-    
+
     <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-populate/browser/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+
     <script>
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
@@ -610,31 +611,6 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-            if (isDev) {
-                const devButton = document.createElement('button');
-                devButton.className = 'btn btn-info btn-small';
-                devButton.innerHTML = '🔄 Forzar Update';
-                devButton.style.cssText = `
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    z-index: 9999;
-                    font-size: 12px;
-                    padding: 8px 12px;
-                `;
-
-                devButton.onclick = async function () {
-                    console.log('🔄 Forzando actualización manual...');
-                    const registration = await navigator.serviceWorker.getRegistration();
-                    if (registration) {
-                        await registration.unregister();
-                        window.location.reload();
-                    }
-                };
-
-                document.body.appendChild(devButton);
-            }
         });
     </script>
 </body>

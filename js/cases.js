@@ -903,10 +903,57 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ===============================================
-//  FUNCIONES GLOBALES ADICIONALES
+// FUNCIONES GLOBALES ADICIONALES - EXPOSICIÓN CRÍTICA
 // ===============================================
 
-window.formatDateForDisplay = formatDateForDisplay;
-window.formatDateForStorage = formatDateForStorage;
+// Exponer funciones globalmente (CRÍTICO para funcionalidad)
+window.switchTab = switchTab;
+window.updateDevButtons = updateDevButtons;
+window.updateRequirementDisplay = updateRequirementDisplay;
+window.reinitializeDragScroll = reinitializeDragScrollFunction;
+
+// ✅ NUEVAS EXPOSICIONES CRÍTICAS PARA CRUD
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
+window.closeModal = closeModal;
+window.deleteTestCase = deleteTestCase;
+window.duplicateTestCase = duplicateTestCase;
+window.viewEvidence = viewEvidence;
+window.renderTestCases = renderTestCases;
+window.applyFilters = applyFilters;
+window.updateFilters = updateFilters;
+window.updateStats = updateStats;
+window.updateStatusAndDate = updateStatusAndDate;
+window.handleEvidenceUpload = handleEvidenceUpload;
+window.addEvidenceToContainer = addEvidenceToContainer;
+window.zoomEvidenceImage = zoomEvidenceImage;
+window.removeVarName = removeVarName;
+
+// ✅ FUNCIONES CRÍTICAS PARA DUPLICACIÓN
+window.insertCaseInCorrectPosition = insertCaseInCorrectPosition;
+window.renumberScenariosAfter = renumberScenariosAfter;
+
+// Debug function para desarrolladores
+window.getTabsInfo = function () {
+    console.log('📋 INFORMACIÓN DEL SISTEMA DE TABS:');
+    console.log('Tab activo:', localStorage.getItem('activeTab'));
+    console.log('Modo desarrollador:', isDeveloper());
+    console.log('Tema actual:', localStorage.getItem('theme'));
+    console.log('Tabs disponibles:', Array.from(document.querySelectorAll('.tab-btn')).map(btn => btn.getAttribute('data-tab')));
+    console.log('Casos totales:', testCases.length);
+    console.log('Timer activo:', activeTimerId);
+}
+
+// ✅ FUNCIÓN DEBUG PARA VERIFICAR ESTADO
+window.debugAppState = function () {
+    console.log('🔍 ESTADO DE LA APLICACIÓN:');
+    console.log('testCases:', testCases.length);
+    console.log('filteredCases:', filteredCases.length);
+    console.log('inputVariableNames:', inputVariableNames);
+    console.log('activeTimerId:', activeTimerId);
+    console.log('currentEditingId:', currentEditingId);
+    console.log('selectedCases:', selectedCases.size);
+}
 
 console.log('✅ cases.js renderizado simplificado - Solo horas y una estadística de tiempo');
+console.log('🔗 Funciones CRUD expuestas globalmente para uso en HTML');

@@ -1,31 +1,15 @@
 // ===============================================
-// SCRIPT-CORE.JS - Variables globales + Inicialización
+// CORE.JS - Variables globales y funciones esenciales
 // ===============================================
 
-// Variables globales
+// ===============================================
+// VARIABLES GLOBALES CRÍTICAS
+// ===============================================
+
+// Datos principales
 let testCases = [];
-let currentEditingId = null;
+let inputVariableNames = ['Variable 1', 'Variable 2']; // Variables por defecto
 let filteredCases = [];
-
-// Variables para el cronómetro
-let timerInterval = null;
-let timerStartTime = null;
-let activeTimerId = null;
-let rowTimerInterval = null;
-let rowTimerStartTime = null;
-let rowTimerAccum = 0;
-
-// Variables globales para nombres de variables
-let inputVariableNames = JSON.parse(localStorage.getItem('inputVariableNames') || '[]');
-
-// Variables globales (agregar)
-let timerPaused = false;
-let pausedTime = 0;
-
-// Variables globales para selección múltiple
-let selectedCases = new Set(); // IDs de casos seleccionados
-
-// Variable global para almacenar información del requerimiento
 let requirementInfo = {
     number: '',
     name: '',
@@ -36,261 +20,291 @@ let requirementInfo = {
     startDate: ''
 };
 
-// Variable para el estado de undo
-let undoAvailable = false;
+// Control de formularios
+let currentEditingId = null;
 
-// Variables globales para drag & drop
+// Sistema de cronómetros
+let activeTimerId = null;
+let rowTimerInterval = null;
+let rowTimerStartTime = 0;
+let rowTimerAccum = 0;
+let timerPaused = false;
+let pausedTime = 0;
+let timerInterval = null; // FALTABA - Para modal
+
+// Sistema de selección múltiple
+let selectedCases = new Set();
+
+// ✅ NUEVAS VARIABLES PARA DRAG & DROP
 let dragState = {
     isDragging: false,
+    draggedCaseId: null,
+    draggedElement: null,
+    placeholder: null,
+    startY: 0,
+    startIndex: 0,
     draggedScenarioNumber: null,
     draggedScenarioBlock: [],
-    draggedElement: null,
-    dragOffset: { x: 0, y: 0 },
-    ghostElement: null,
     dropZoneElement: null,
-    originalOrder: [], // Para undo
-    canDrag: true
+    ghostElement: null
 };
 
-// Variables para auto-scroll
+// ✅ VARIABLE PARA AUTO-SCROLL EN DRAG & DROP
 let autoScrollState = {
-    isActive: false,
-    direction: null, // 'up' o 'down'
-    speed: 0,
     interval: null,
-    container: null,
+    direction: null,
+    speed: 0,
     zones: {
-        top: 50,    // Zona de auto-scroll superior (50px desde el borde)
-        bottom: 50  // Zona de auto-scroll inferior (50px desde el borde)
+        top: 50,
+        bottom: 50
     }
 };
+
+// ✅ VARIABLES PARA CONTENEDOR Y COORDENADAS
+let containerBounds = null;
+let scrollContainer = null;
 
 // ===============================================
 // FUNCIONES DE PERSISTENCIA
 // ===============================================
 
-// Funciones de persistencia
-window.saveToStorage = function () {
-    const data = JSON.stringify(testCases, null, 2);
-    localStorage.setItem('testCases', data);
+function saveToStorage() {
+    try {
+        localStorage.setItem('testCases', JSON.stringify(testCases));
+        localStorage.setItem('inputVariableNames', JSON.stringify(inputVariableNames));
+        localStorage.setItem('requirementInfo', JSON.stringify(requirementInfo));
+        console.log('✅ Datos guardados en localStorage');
+    } catch (e) {
+        console.error('❌ Error guardando en localStorage:', e);
+        alert('Error al guardar datos. Espacio de almacenamiento lleno.');
+    }
 }
 
-window.loadFromStorage = function () {
-    const data = localStorage.getItem('testCases');
-    if (data) {
-        try {
-            testCases = JSON.parse(data);
-
-            // Migrar datos antiguos
-            testCases = testCases.map(testCase => {
-                // Eliminar expectedResult si existe (campo eliminado)
-                if ('expectedResult' in testCase) {
-                    delete testCase.expectedResult;
-                }
-
-                // Convertir inputVariables de string a array
-                if (testCase.inputVariables && typeof testCase.inputVariables === 'string') {
-                    const variables = [];
-                    if (testCase.inputVariables.trim()) {
-                        const parts = testCase.inputVariables.split(/[\n,;]/).filter(p => p.trim());
-                        parts.forEach((part, index) => {
-                            const colonIndex = part.indexOf(':');
-                            if (colonIndex > 0) {
-                                variables.push({
-                                    name: part.substring(0, colonIndex).trim(),
-                                    value: part.substring(colonIndex + 1).trim()
-                                });
-                            } else {
-                                variables.push({
-                                    name: `Variable ${index + 1}`,
-                                    value: part.trim()
-                                });
-                            }
-                        });
-                    }
-                    testCase.inputVariables = variables;
-                }
-
-                // Asegurar que inputVariables sea siempre un array
-                if (!Array.isArray(testCase.inputVariables)) {
-                    testCase.inputVariables = [];
-                }
-
-                return testCase;
-            });
-
-            // Guardar datos migrados
-            saveToStorage();
-
-        } catch (e) {
-            console.error('Error al cargar datos:', e);
-            testCases = [];
+function loadFromStorage() {
+    try {
+        // Cargar casos de prueba
+        const savedCases = localStorage.getItem('testCases');
+        if (savedCases) {
+            testCases = JSON.parse(savedCases);
         }
+
+        // Cargar variables de entrada
+        const savedVars = localStorage.getItem('inputVariableNames');
+        if (savedVars) {
+            inputVariableNames = JSON.parse(savedVars);
+        }
+
+        // Cargar información del requerimiento
+        const savedReqInfo = localStorage.getItem('requirementInfo');
+        if (savedReqInfo) {
+            requirementInfo = JSON.parse(savedReqInfo);
+        }
+
+        // Asegurar que filteredCases esté inicializado
+        filteredCases = [...testCases];
+
+        console.log('✅ Datos cargados desde localStorage');
+        console.log(`📊 ${testCases.length} casos cargados`);
+        
+    } catch (e) {
+        console.error('❌ Error cargando desde localStorage:', e);
+        // Inicializar con valores por defecto
+        testCases = [];
+        inputVariableNames = ['Variable 1', 'Variable 2'];
+        filteredCases = [];
     }
 }
 
 // ===============================================
-// INICIALIZACIÓN Y EVENT LISTENERS PRINCIPALES
+// FUNCIONES DE INICIALIZACIÓN
 // ===============================================
 
-// Event Listeners
-document.addEventListener('DOMContentLoaded', function () {
-    // Cargar datos al iniciar
+function initializeApp() {
+    console.log('🚀 Inicializando aplicación...');
+    
+    // Cargar datos
     loadFromStorage();
-    renderTestCases();
-    updateStats();
-    updateFilters();
+    
+    // Configurar event listeners esenciales
+    setupEssentialEventListeners();
+    
+    // Actualizar interfaz
+    if (typeof updateFilters === 'function') {
+        updateFilters();
+    }
+    
+    if (typeof renderTestCases === 'function') {
+        renderTestCases();
+    }
+    
+    if (typeof updateRequirementDisplay === 'function') {
+        updateRequirementDisplay();
+    }
+    
+    console.log('✅ Aplicación inicializada correctamente');
+}
 
-    // Event listeners para botones
-    document.getElementById('btnAddCase').addEventListener('click', openAddModal);
-    document.getElementById('btnLoadCases').addEventListener('click', loadTestCases);
-    document.getElementById('btnSaveCases').addEventListener('click', saveTestCases);
-    document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
-    document.getElementById('btnImportExcel').addEventListener('click', importFromExcel);
-    document.getElementById('btnClearAll').addEventListener('click', clearAllData);
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    document.getElementById('btnCancelModal').addEventListener('click', closeModal);
-
-    // Event listeners para el modal de evidencias
-    document.getElementById('closeEvidenceModalBtn').addEventListener('click', function () {
-        document.getElementById('evidenceViewModal').style.display = 'none';
-    });
-
-    // Funciones del cronómetro
-    window.startTimer = function () {
-        timerStartTime = Date.now();
-        document.getElementById('btnStartTimer').style.display = 'none';
-        document.getElementById('btnStopTimer').style.display = 'inline-block';
-
-        timerInterval = setInterval(function () {
-            const elapsed = Date.now() - timerStartTime;
-            const seconds = Math.floor(elapsed / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            document.getElementById('timerDisplay').textContent =
-                `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }, 100);
-    };
-
-    window.stopTimer = function () {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-
-        const elapsed = Date.now() - timerStartTime;
-        const minutes = elapsed / 60000;
-        document.getElementById('testTime').value = Math.round(minutes * 2) / 2; // Redondear a 0.5
-
-        document.getElementById('btnStartTimer').style.display = 'inline-block';
-        document.getElementById('btnStopTimer').style.display = 'none';
-        document.getElementById('timerDisplay').textContent = '✓ Tiempo registrado';
-    };
-
+function setupEssentialEventListeners() {
     // Event listeners para filtros
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
-    document.getElementById('testerFilter').addEventListener('change', applyFilters);
-    document.getElementById('statusFilter').addEventListener('change', applyFilters);
-    document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
-    document.getElementById('dateToFilter').addEventListener('change', applyFilters);
-
-    // Event listener para carga de evidencias
-    document.getElementById('evidenceInput').addEventListener('change', handleEvidenceUpload);
-
-    // Event listeners para edición masiva
-    const closeBulkEditBtn = document.getElementById('closeBulkEditBtn');
-    if (closeBulkEditBtn) {
-        closeBulkEditBtn.addEventListener('click', closeBulkEditModal);
-    }
-
-    const btnCancelBulkEdit = document.getElementById('btnCancelBulkEdit');
-    if (btnCancelBulkEdit) {
-        btnCancelBulkEdit.addEventListener('click', closeBulkEditModal);
-    }
-
-    // Cerrar modal al hacer clic fuera
-    const bulkEditModal = document.getElementById('bulkEditModal');
-    if (bulkEditModal) {
-        bulkEditModal.addEventListener('click', function (e) {
-            if (e.target === bulkEditModal) {
-                closeBulkEditModal();
-            }
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            if (typeof applyFilters === 'function') applyFilters();
         });
     }
 
-    // Auto-guardar cada 30 segundos
-    setInterval(saveToStorage, 30000);
-});
-
-// Cerrar modal al hacer clic fuera
-window.onclick = function (event) {
-    const modal = document.getElementById('testCaseModal');
-    const evidenceModal = document.getElementById('evidenceViewModal');
-    if (event.target === modal) {
-        closeModal();
-    } else if (event.target === evidenceModal) {
-        evidenceModal.style.display = 'none';
+    const testerFilter = document.getElementById('testerFilter');
+    if (testerFilter) {
+        testerFilter.addEventListener('change', () => {
+            if (typeof applyFilters === 'function') applyFilters();
+        });
     }
-};
 
-// Atajos de teclado
-document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-            case 'n':
-                e.preventDefault();
-                openAddModal();
-                break;
-            case 's':
-                e.preventDefault();
-                saveTestCases();
-                break;
-            case 'o':
-                e.preventDefault();
-                loadTestCases();
-                break;
-        }
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            if (typeof applyFilters === 'function') applyFilters();
+        });
     }
-    if (e.key === 'Escape') {
-        closeModal();
+
+    const dateFromFilter = document.getElementById('dateFromFilter');
+    if (dateFromFilter) {
+        dateFromFilter.addEventListener('change', () => {
+            if (typeof applyFilters === 'function') applyFilters();
+        });
     }
-});
 
-// Event listener para Ctrl+Z (undo drag)
-document.addEventListener('keydown', function (event) {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && undoAvailable) {
-        event.preventDefault();
-        undoLastDragMove();
+    const dateToFilter = document.getElementById('dateToFilter');
+    if (dateToFilter) {
+        dateToFilter.addEventListener('change', () => {
+            if (typeof applyFilters === 'function') applyFilters();
+        });
     }
-});
 
-// ===============================================
-// CONFIGURACIÓN DE TEMA (MODO OSCURO)
-// ===============================================
+    // Event listeners para botones principales
+    const btnAddCase = document.getElementById('btnAddCase');
+    if (btnAddCase) {
+        btnAddCase.addEventListener('click', () => {
+            if (typeof openAddModal === 'function') openAddModal();
+        });
+    }
 
-// Referencias al switch y al label
-const themeToggle = document.getElementById('themeToggle');
-const themeLabel = document.getElementById('themeLabel');
+    const btnClearAll = document.getElementById('btnClearAll');
+    if (btnClearAll) {
+        btnClearAll.addEventListener('click', clearAllData);
+    }
 
-// Cargar el tema guardado en localStorage
-const savedTheme = localStorage.getItem('theme') || 'light';
-if (savedTheme === 'dark') {
-    document.body.classList.add('dark-mode');
-    themeToggle.checked = true;
-    themeLabel.textContent = 'Modo Oscuro';
+    // Event listeners para modales
+    setupModalEventListeners();
 }
 
-// Alternar entre modo claro y oscuro
-themeToggle.addEventListener('change', () => {
-    if (themeToggle.checked) {
-        document.body.classList.add('dark-mode');
-        themeLabel.textContent = 'Modo Oscuro';
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.body.classList.remove('dark-mode');
-        themeLabel.textContent = 'Modo Claro';
-        localStorage.setItem('theme', 'light');
+function setupModalEventListeners() {
+    // Modal principal de casos
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            if (typeof closeModal === 'function') closeModal();
+        });
     }
-});
 
-console.log('✅ Script-core.js cargado - Variables globales e inicialización');
+    const btnCancelModal = document.getElementById('btnCancelModal');
+    if (btnCancelModal) {
+        btnCancelModal.addEventListener('click', () => {
+            if (typeof closeModal === 'function') closeModal();
+        });
+    }
+
+    // Event listener para subida de evidencias
+    const evidenceInput = document.getElementById('evidenceInput');
+    if (evidenceInput) {
+        evidenceInput.addEventListener('change', () => {
+            if (typeof handleEvidenceUpload === 'function') handleEvidenceUpload();
+        });
+    }
+
+    // Modal de evidencias
+    const closeEvidenceModalBtn = document.getElementById('closeEvidenceModalBtn');
+    if (closeEvidenceModalBtn) {
+        closeEvidenceModalBtn.addEventListener('click', () => {
+            document.getElementById('evidenceViewModal').style.display = 'none';
+        });
+    }
+
+    // Cerrar modales al hacer clic fuera
+    window.addEventListener('click', function(event) {
+        const modals = ['testCaseModal', 'evidenceViewModal', 'configVarsModal', 'requirementModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal && event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+}
+
+// ===============================================
+// FUNCIÓN PARA LIMPIAR TODOS LOS DATOS
+// ===============================================
+
+function clearAllData() {
+    const confirmMessage = `⚠️ ¿Estás seguro de que deseas eliminar TODOS los datos?
+
+Esto eliminará:
+• Todos los casos de prueba
+• Configuración de variables
+• Información del requerimiento
+• Historial y estadísticas
+
+⚠️ Esta acción NO se puede deshacer.`;
+
+    if (confirm(confirmMessage)) {
+        // Limpiar variables
+        testCases = [];
+        filteredCases = [];
+        inputVariableNames = ['Variable 1', 'Variable 2'];
+        requirementInfo = {
+            number: '',
+            name: '',
+            description: '',
+            caso: '',
+            titleCase: '',
+            tester: '',
+            startDate: ''
+        };
+        selectedCases.clear();
+
+        // Detener cronómetro si está activo
+        if (activeTimerId !== null && typeof stopRowTimer === 'function') {
+            stopRowTimer();
+        }
+
+        // Limpiar localStorage
+        localStorage.removeItem('testCases');
+        localStorage.removeItem('inputVariableNames');
+        localStorage.removeItem('requirementInfo');
+        localStorage.removeItem('activeTab');
+
+        // Actualizar interfaz
+        if (typeof renderTestCases === 'function') renderTestCases();
+        if (typeof updateStats === 'function') updateStats();
+        if (typeof updateFilters === 'function') updateFilters();
+        if (typeof updateRequirementDisplay === 'function') updateRequirementDisplay();
+
+        alert('✅ Todos los datos han sido eliminados correctamente');
+        console.log('🗑️ Todos los datos eliminados');
+    }
+}
+
+// ===============================================
+// INICIALIZACIÓN AL CARGAR LA PÁGINA
+// ===============================================
+
+// Auto-inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // Si el documento ya está cargado
+    initializeApp();
+}
+
+console.log('✅ core.js cargado - Variables globales y funciones esenciales inicializadas');

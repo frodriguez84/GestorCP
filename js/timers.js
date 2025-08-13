@@ -31,11 +31,22 @@ function toggleRowTimer(id) {
 }
 
 function startNewTimer(id) {
+    // Limpiar timer anterior si existe
+    if (rowTimerInterval) {
+        clearInterval(rowTimerInterval);
+        rowTimerInterval = null;
+    }
+
     activeTimerId = id;
     timerPaused = false;
     pausedTime = 0;
 
     const testCase = testCases.find(tc => tc.id === id);
+    if (!testCase) {
+        console.error('❌ No se encontró el caso para iniciar timer:', id);
+        return;
+    }
+
     // Convertir horas existentes a minutos para cálculo interno
     rowTimerAccum = (parseFloat(testCase.testTime) || 0) * 60;
     rowTimerStartTime = Date.now();
@@ -43,9 +54,13 @@ function startNewTimer(id) {
     showTimerBar(testCase);
     updateAllTimerButtons();
 
-    rowTimerInterval = setInterval(updateTimerDisplay, 1000); // Cada segundo es suficiente
+    // Asegurar que el interval se crea correctamente
+    rowTimerInterval = setInterval(() => {
+        updateTimerDisplay();
+    }, 1000);
 
     console.log(`⏱️ Cronómetro iniciado: Escenario ${testCase.scenarioNumber}, tiempo acumulado: ${testCase.testTime || 0} horas`);
+    console.log(`🔗 Timer ID: ${activeTimerId}, Interval ID: ${rowTimerInterval}`);
 }
 
 function showTimerBar(testCase) {
@@ -67,12 +82,19 @@ function showTimerBar(testCase) {
 function updateTimerDisplay() {
     if (!activeTimerId || timerPaused) return;
 
+    // Calcular tiempo transcurrido en minutos
     const elapsed = (Date.now() - rowTimerStartTime) / 60000;
     const total = rowTimerAccum + elapsed;
 
+    // Actualizar display visual
     const display = document.getElementById('timerDisplay');
     if (display) {
         display.textContent = formatTimeDisplay(total);
+    }
+
+    // Debug para verificar que está funcionando
+    if (total % 5 < 0.1) { // Log cada ~5 minutos para debug
+        console.log(`⏱️ Timer activo: ${formatTimeDisplay(total)} (ID: ${activeTimerId})`);
     }
 }
 
@@ -99,10 +121,18 @@ function pauseTimer() {
 }
 
 // Función detener cronómetro (guarda en horas)
+// Función detener cronómetro (guarda en horas)
 function stopRowTimer() {
-    if (activeTimerId === null) return;
+    if (activeTimerId === null) {
+        console.log('⏱️ No hay timer activo para detener');
+        return;
+    }
 
-    clearInterval(rowTimerInterval);
+    // Limpiar interval
+    if (rowTimerInterval) {
+        clearInterval(rowTimerInterval);
+        rowTimerInterval = null;
+    }
 
     // Guardar tiempo final EN HORAS
     const testCase = testCases.find(tc => tc.id === activeTimerId);
@@ -114,7 +144,7 @@ function stopRowTimer() {
         let totalHours = totalMinutes / 60;
         testCase.testTime = Math.round(totalHours * 100) / 100;
 
-        console.log(`⏹️ Cronómetro detenido: ${totalHours.toFixed(2)} horas total`);
+        console.log(`⏹️ Cronómetro detenido: ${totalHours.toFixed(2)} horas total (Escenario ${testCase.scenarioNumber})`);
     }
 
     // RESET COMPLETO
@@ -122,14 +152,29 @@ function stopRowTimer() {
     activeTimerId = null;
     timerPaused = false;
     pausedTime = 0;
+    rowTimerAccum = 0;
+    rowTimerStartTime = 0;
 
     // Ocultar barra y actualizar botones
-    document.getElementById('timerBar').style.display = 'none';
+    const timerBar = document.getElementById('timerBar');
+    if (timerBar) {
+        timerBar.style.display = 'none';
+    }
+    
     updateAllTimerButtons();
 
+    // Guardar datos y actualizar interfaz
     saveToStorage();
-    renderTestCases();
-    updateStats();
+    
+    // Actualizar tabla si las funciones existen
+    if (typeof renderTestCases === 'function') {
+        renderTestCases();
+    }
+    if (typeof updateStats === 'function') {
+        updateStats();
+    }
+
+    console.log(`✅ Timer ${oldTimerId} completamente detenido y guardado`);
 }
 
 function getScenarioNumber(id) {

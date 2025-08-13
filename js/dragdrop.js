@@ -591,7 +591,7 @@ function showDragSuccessMessage() {
              
         </div>
     `;
-            //<button class="drag-undo-btn" onclick="undoLastDragMove()">↩️ Deshacer (Ctrl+Z)</button>
+    //<button class="drag-undo-btn" onclick="undoLastDragMove()">↩️ Deshacer (Ctrl+Z)</button>
     document.body.appendChild(notification);
 
     // Remover después de 5 segundos
@@ -778,6 +778,10 @@ function stopAutoScroll() {
     autoScrollState.direction = null;
     autoScrollState.speed = 0;
     autoScrollState.container = null;
+    // ✅ MANTENER zones intacto
+    if (!autoScrollState.zones) {
+        autoScrollState.zones = { top: 50, bottom: 50 };
+    }
 }
 
 // ===============================================

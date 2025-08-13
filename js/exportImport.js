@@ -1229,4 +1229,45 @@ window.getRequirementInfoForExport = function () {
     };
 }
 
+// ===============================================
+// EVENT LISTENERS PARA BOTONES
+// ===============================================
+
+// Exponer función de exportar Excel globalmente
+window.exportToExcel = exportToExcel;
+
+// Configurar event listeners cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Botón Guardar Excel
+    const btnExportExcel = document.getElementById('btnExportExcel');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', exportToExcel);
+        console.log('✅ Event listener agregado: Guardar Excel');
+    }
+
+    // Botón Guardar JSON
+    const btnSaveCases = document.getElementById('btnSaveCases');
+    if (btnSaveCases) {
+        btnSaveCases.addEventListener('click', window.saveTestCases);
+        console.log('✅ Event listener agregado: Guardar JSON');
+    }
+
+    // Botón Cargar Excel
+    const btnImportExcel = document.getElementById('btnImportExcel');
+    if (btnImportExcel) {
+        btnImportExcel.addEventListener('click', window.importFromExcel);
+        console.log('✅ Event listener agregado: Cargar Excel');
+    }
+
+    // Botón Cargar JSON
+    const btnLoadCases = document.getElementById('btnLoadCases');
+    if (btnLoadCases) {
+        btnLoadCases.addEventListener('click', window.loadTestCases);
+        console.log('✅ Event listener agregado: Cargar JSON');
+    }
+
+    console.log('🔗 Todos los event listeners de Import/Export configurados');
+});
+
 console.log('✅ export.js cargado - Import/Export Excel y JSON completo');

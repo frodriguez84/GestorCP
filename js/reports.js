@@ -225,7 +225,51 @@ function generateReportContent() {
     return content;
 }
 
+// Abrir modal de vista previa
+function openReportPreview() {
+    try {
+        console.log('🚀 Iniciando generación de reporte...');
+        
+        // Validar que hay datos
+        if (testCases.length === 0) {
+            alert('⚠️ No hay casos de prueba para generar reporte');
+            return;
+        }
 
+        console.log('📊 Datos encontrados:', testCases.length, 'casos');
+
+        // Generar contenido
+        const reportContent = generateReportContent();
+        
+        console.log('📝 Contenido generado, caracteres:', reportContent.length);
+        
+        // Mostrar en el modal
+        const contentElement = document.getElementById('reportPreviewContent');
+        if (!contentElement) {
+            throw new Error('No se encontró el elemento reportPreviewContent');
+        }
+        
+        contentElement.textContent = reportContent;
+        
+        const modalElement = document.getElementById('reportPreviewModal');
+        if (!modalElement) {
+            throw new Error('No se encontró el elemento reportPreviewModal');
+        }
+        
+        modalElement.style.display = 'block';
+        
+        console.log('✅ Reporte generado para preview');
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        alert('❌ Error al generar el reporte: ' + error.message);
+    }
+}
+
+// Cerrar modal de reporte
+function closeReportModal() {
+    document.getElementById('reportPreviewModal').style.display = 'none';
+}
 
 // ===============================================
 // FUNCIÓN PARA GENERAR PDF
