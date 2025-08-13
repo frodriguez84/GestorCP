@@ -442,7 +442,6 @@ window.renderTestCases = function () {
 
     // Verificar si ya existe la columna de checkbox
     if (!theadRow.querySelector('.checkbox-column')) {
-        // Crear columna de checkbox
         const checkboxTh = document.createElement('th');
         checkboxTh.className = 'checkbox-column';
         checkboxTh.innerHTML = `
@@ -451,29 +450,25 @@ window.renderTestCases = function () {
         theadRow.insertBefore(checkboxTh, theadRow.firstChild);
     }
 
-    // 🆕 NUEVA COLUMNA DE DRAG HANDLE
+    // NUEVA COLUMNA DE DRAG HANDLE
     if (!theadRow.querySelector('.drag-handle-column')) {
         const dragHandleTh = document.createElement('th');
         dragHandleTh.className = 'drag-handle-column';
         dragHandleTh.innerHTML = `⋮⋮`;
         dragHandleTh.title = 'Reordenar escenarios';
-        // Insertar después del checkbox (posición 1)
         theadRow.insertBefore(dragHandleTh, theadRow.children[1]);
     }
 
-    // Elimina cualquier th de variables anterior (entre Descripción y Resultado Esperado)
-    // Ajustar índices por la nueva columna drag handle
+    // Limpiar columnas de variables anteriores
     while (theadRow.children[5] && theadRow.children[5].id === "varsThPlaceholder") {
         theadRow.removeChild(theadRow.children[5]);
     }
 
-    // Elimina cualquier th de variables anterior
     while (theadRow.children[5] && theadRow.children[5].textContent !== "Resultado Esperado") {
         theadRow.removeChild(theadRow.children[5]);
     }
 
-    // Inserta las columnas de variables configuradas
-    // Ahora en posición 5 (después de checkbox, drag handle, ciclo, escenario, descripción)
+    // Insertar columnas de variables configuradas
     inputVariableNames.forEach(varName => {
         const th = document.createElement('th');
         th.textContent = varName;
@@ -482,6 +477,16 @@ window.renderTestCases = function () {
         th.classList.add('variable-column');
         theadRow.insertBefore(th, theadRow.querySelector('.col-resultado-esperado'));
     });
+
+    // 🆕 ACTUALIZAR HEADER DE TIEMPO simplificado
+    const tiempoHeader = theadRow.querySelector('.col-tiempo');
+    if (tiempoHeader) {
+        tiempoHeader.textContent = 'Tiempo (hs)';
+        tiempoHeader.style.minWidth = '100px';
+        tiempoHeader.style.maxWidth = '100px';
+        tiempoHeader.style.textAlign = 'center';
+    }
+
     // --- FIN ACTUALIZAR THEAD ---
 
     if (filteredCases.length === 0) {
@@ -501,6 +506,9 @@ window.renderTestCases = function () {
         const evidenceCount = testCase.evidence ? testCase.evidence.length : 0;
         const isSelected = selectedCases.has(testCase.id);
 
+        // 🆕 TIEMPO SIMPLIFICADO - Solo horas
+        const timeHours = parseFloat(testCase.testTime) || 0;
+
         return `
             <tr class="${statusClass} ${isSelected ? 'row-selected' : ''}" data-case-id="${testCase.id}">
                 <!-- Checkbox de selección -->
@@ -510,7 +518,7 @@ window.renderTestCases = function () {
                            title="Seleccionar caso">
                 </td>
                 
-                <!-- 🆕 NUEVA COLUMNA DE DRAG HANDLE -->
+                <!-- NUEVA COLUMNA DE DRAG HANDLE -->
                 <td class="drag-handle-column">
                     <div class="drag-handle" 
                          onmousedown="startScenarioDrag(${testCase.id}, event)"
@@ -526,9 +534,9 @@ window.renderTestCases = function () {
                 
                 <!-- Variables dinámicas -->
                 ${inputVariableNames.map(varName => {
-            const found = (testCase.inputVariables || []).find(v => v.name === varName);
-            return `<td class="variable-column" style="min-width: 150px; max-width: 150px;">${found ? found.value : ''}</td>`;
-        }).join('')}
+                    const found = (testCase.inputVariables || []).find(v => v.name === varName);
+                    return `<td class="variable-column" style="min-width: 150px; max-width: 150px;">${found ? found.value : ''}</td>`;
+                }).join('')}
         
                 <td class="col-resultado-esperado">${testCase.obtainedResult || ''}</td>
                 <td>
@@ -542,22 +550,29 @@ window.renderTestCases = function () {
                 <td class="col-observaciones">${testCase.observations || ''}</td>
                 <td class="col-error">${testCase.errorNumber || ''}</td>
                 <td class="col-tester">${testCase.tester || ''}</td>
-                <td>
-                    <input type="number" min="0" value="${testCase.testTime ? Math.trunc(testCase.testTime) : 0}" 
-                        style="width: 60px; text-align: right;" 
-                        onchange="updateManualTime(${testCase.id}, this.value)">
+                
+                <!-- 🆕 COLUMNA DE TIEMPO SIMPLIFICADA -->
+                <td class="col-tiempo" style="text-align: center;">
+                    <input type="number" min="0" step="0.25" value="${timeHours.toFixed(2)}" 
+                        style="width: 70px; text-align: center; font-weight: bold;" 
+                        onchange="updateManualTime(${testCase.id}, this.value)"
+                        title="Tiempo en horas (ej: 1.5 = 1 hora 30 min)">
                 </td>
                 
                 <td class="col-evidencias">${evidenceCount > 0 ?
-                `<a href="#" onclick="viewEvidence(${testCase.id}); return false;" style="color: #3498db; text-decoration: underline; cursor: pointer;">📎 ${evidenceCount} archivos</a>` :
-                'Sin evidencias'}</td>
+                    `<a href="#" onclick="viewEvidence(${testCase.id}); return false;" style="color: #3498db; text-decoration: underline; cursor: pointer;">🔎 ${evidenceCount} archivos</a>` :
+                    'Sin evidencias'}</td>
                 
                 <td class="action-buttons">
                     <button class="btn btn-info btn-small" onclick="openEditModal(${testCase.id})" title="Editar Escenario">✏️</button>
                     <button class="btn btn-success btn-small" onclick="duplicateTestCase(${testCase.id})" title="Duplicar Escenario">📋</button>
                     <button class="btn btn-danger btn-small" onclick="deleteTestCase(${testCase.id})" title="Borrar Escenario">🗑️</button>
-                    <button class="btn btn-info btn-small" onclick="toggleRowTimer(${testCase.id})" id="timerBtn-${testCase.id}" title="Cronometrar Tiempo">${activeTimerId === testCase.id ? '⏹️' : '⏱️'}</button>
-                    
+                    <button class="btn ${activeTimerId === testCase.id ? 'btn-danger' : 'btn-info'} btn-small" 
+                            onclick="toggleRowTimer(${testCase.id})" 
+                            id="timerBtn-${testCase.id}" 
+                            title="${activeTimerId === testCase.id ? 'Detener cronómetro' : 'Iniciar cronómetro'}">
+                        ${activeTimerId === testCase.id ? '⏹️' : '⏱️'}
+                    </button>
                 </td>
             </tr>
         `;
@@ -652,10 +667,64 @@ window.updateStats = function () {
     const noCases = filteredCases.filter(tc => tc.status === 'NO').length;
     const successRate = total > 0 ? Math.round((okCases / total) * 100) : 0;
 
+    // Stats básicas existentes
     document.getElementById('totalCases').textContent = total;
     document.getElementById('okCases').textContent = okCases;
     document.getElementById('noCases').textContent = noCases;
     document.getElementById('successRate').textContent = successRate + '%';
+
+    // 🆕 AGREGAR SOLO UNA STAT DE TIEMPO TOTAL
+    addTotalTimeStatsCard();
+}
+
+// Agregar solo una tarjeta de tiempo total
+function addTotalTimeStatsCard() {
+    const statsContainer = document.getElementById('statsContainer');
+    
+    // Verificar si ya existe la tarjeta de tiempo
+    const existingTimeCard = document.getElementById('totalTimeCard');
+    if (existingTimeCard) existingTimeCard.remove();
+    
+    // Limpiar tarjetas antiguas de cuantización si existen
+    const oldQuantizedCard = document.getElementById('quantizedTimeCard');
+    const oldTimeStatsCard = document.getElementById('timeStatsCard');
+    if (oldQuantizedCard) oldQuantizedCard.remove();
+    if (oldTimeStatsCard) oldTimeStatsCard.remove();
+    
+    // Obtener estadísticas de tiempo
+    const timeStats = getTimeStatistics();
+    
+    if (timeStats.casesWithTime > 0) {
+        // Tarjeta de tiempo total (única)
+        const timeCard = document.createElement('div');
+        timeCard.id = 'totalTimeCard';
+        timeCard.className = 'stat-card';
+        timeCard.innerHTML = `
+            <div class="stat-number">${timeStats.totalHours.toFixed(1)}h</div>
+            <div class="stat-label">Tiempo Total</div>
+        `;
+        timeCard.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        timeCard.title = `${timeStats.totalHours.toFixed(2)} horas en ${timeStats.casesWithTime} casos\nPromedio: ${timeStats.averageTimePerCase.toFixed(2)}h por caso\nClick para ver detalles`;
+        timeCard.style.cursor = 'pointer';
+        timeCard.onclick = () => showTimeInfo();
+        
+        // Agregar ícono
+        timeCard.style.position = 'relative';
+        timeCard.style.overflow = 'hidden';
+        
+        const icon = document.createElement('div');
+        icon.innerHTML = '⏱️';
+        icon.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 1.2em;
+            opacity: 0.7;
+        `;
+        timeCard.appendChild(icon);
+        
+        statsContainer.appendChild(timeCard);
+    }
 }
 
 // Función para obtener contador de casos ocultos
@@ -786,4 +855,4 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(initializeHiddenFunctionality, 1000); // Después de que todo se cargue
 });
 
-console.log('✅ Script-cases.js cargado - CRUD casos y filtros');
+console.log('✅ cases.js renderizado simplificado - Solo horas y una estadística de tiempo');

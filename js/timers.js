@@ -16,8 +16,11 @@ function toggleRowTimer(id) {
 
     if (activeTimerId !== null) {
         // Si hay otro activo → Confirmar cambio
-        if (!confirm(`⏱️ Ya tienes un cronómetro activo en el Escenario ${getScenarioNumber(activeTimerId)} - Ciclo ${getCicleNumber(activeTimerId)}.
-        \n¿Detenerlo y cambiar al Escenario ${getScenarioNumber(id)} - Ciclo ${getCicleNumber(activeTimerId)}?`)) {
+        const activeCase = testCases.find(tc => tc.id === activeTimerId);
+        const newCase = testCases.find(tc => tc.id === id);
+
+        if (!confirm(`⏱️ Ya tienes un cronómetro activo en el Escenario ${activeCase?.scenarioNumber} - Ciclo ${activeCase?.cycleNumber}.
+        \n¿Detenerlo y cambiar al Escenario ${newCase?.scenarioNumber} - Ciclo ${newCase?.cycleNumber}?`)) {
             return;
         }
         stopRowTimer();
@@ -33,13 +36,16 @@ function startNewTimer(id) {
     pausedTime = 0;
 
     const testCase = testCases.find(tc => tc.id === id);
-    rowTimerAccum = parseFloat(testCase.testTime) || 0;
+    // Convertir horas existentes a minutos para cálculo interno
+    rowTimerAccum = (parseFloat(testCase.testTime) || 0) * 60;
     rowTimerStartTime = Date.now();
 
     showTimerBar(testCase);
-    updateAllTimerButtons(); // ← NUEVA función
+    updateAllTimerButtons();
 
-    rowTimerInterval = setInterval(updateTimerDisplay, 500);
+    rowTimerInterval = setInterval(updateTimerDisplay, 1000); // Cada segundo es suficiente
+
+    console.log(`⏱️ Cronómetro iniciado: Escenario ${testCase.scenarioNumber}, tiempo acumulado: ${testCase.testTime || 0} horas`);
 }
 
 function showTimerBar(testCase) {
@@ -63,12 +69,10 @@ function updateTimerDisplay() {
 
     const elapsed = (Date.now() - rowTimerStartTime) / 60000;
     const total = rowTimerAccum + elapsed;
-    const minutes = Math.floor(total);
-    const seconds = Math.floor((total - minutes) * 60);
 
     const display = document.getElementById('timerDisplay');
     if (display) {
-        display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        display.textContent = formatTimeDisplay(total);
     }
 }
 
@@ -83,27 +87,34 @@ function pauseTimer() {
         rowTimerStartTime = Date.now() - pausedTime;
         pauseBtn.innerHTML = '⏸️ Pausar';
         pauseBtn.className = 'btn btn-warning btn-small';
+        console.log('⏱️ Cronómetro reanudado');
     } else {
         // Pausar
         timerPaused = true;
         pausedTime = Date.now() - rowTimerStartTime;
         pauseBtn.innerHTML = '▶️ Reanudar';
         pauseBtn.className = 'btn btn-success btn-small';
+        console.log('⏸️ Cronómetro pausado');
     }
 }
 
-// Funcion detener cronometro en filas
+// Función detener cronómetro (guarda en horas)
 function stopRowTimer() {
     if (activeTimerId === null) return;
 
     clearInterval(rowTimerInterval);
 
-    // Guardar tiempo final
+    // Guardar tiempo final EN HORAS
     const testCase = testCases.find(tc => tc.id === activeTimerId);
     if (testCase) {
         const elapsed = timerPaused ? pausedTime / 60000 : (Date.now() - rowTimerStartTime) / 60000;
-        let total = (parseFloat(testCase.testTime) || 0) + elapsed;
-        testCase.testTime = Math.trunc(total);
+        let totalMinutes = rowTimerAccum + elapsed;
+
+        // Convertir a horas y guardar con 2 decimales
+        let totalHours = totalMinutes / 60;
+        testCase.testTime = Math.round(totalHours * 100) / 100;
+
+        console.log(`⏹️ Cronómetro detenido: ${totalHours.toFixed(2)} horas total`);
     }
 
     // RESET COMPLETO
@@ -114,10 +125,11 @@ function stopRowTimer() {
 
     // Ocultar barra y actualizar botones
     document.getElementById('timerBar').style.display = 'none';
-    updateAllTimerButtons(); // ← NUEVA función
+    updateAllTimerButtons();
 
     saveToStorage();
     renderTestCases();
+    updateStats();
 }
 
 function getScenarioNumber(id) {
@@ -138,13 +150,16 @@ function updateAllTimerButtons() {
             if (activeTimerId === tc.id) {
                 btn.textContent = '⏹️';
                 btn.title = 'Detener cronómetro';
+                btn.className = 'btn btn-danger btn-small';
             } else {
                 btn.textContent = '⏱️';
                 btn.title = 'Iniciar cronómetro';
+                btn.className = 'btn btn-info btn-small';
             }
         }
     });
 }
+
 
 // ===============================================
 // EDICIÓN MANUAL DE TIEMPO
@@ -154,17 +169,48 @@ function updateAllTimerButtons() {
 window.updateManualTime = function (id, value) {
     const testCase = testCases.find(tc => tc.id === id);
     if (testCase) {
-        testCase.testTime = Math.max(0, Math.trunc(Number(value)) || 0);
+        const newTimeHours = Math.max(0, parseFloat(value) || 0);
+        testCase.testTime = newTimeHours;
 
         // ACTUALIZACIÓN INMEDIATA
         saveToStorage();
-
-        // No necesita updateStats porque el tiempo no afecta las estadísticas principales
-        // Pero sí necesita re-renderizar para mantener consistency
         renderTestCases();
+        updateStats();
 
-        console.log(`⏱️ Tiempo actualizado: Escenario ${testCase.scenarioNumber} → ${testCase.testTime} min`);
+        console.log(`⏱️ Tiempo actualizado manualmente: Escenario ${testCase.scenarioNumber} → ${newTimeHours} horas`);
     }
+}
+
+// Función simplificada para formatear tiempo en hh:mm
+function formatTimeDisplay(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.floor(totalMinutes % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+
+// ===============================================
+// FUNCIONES PARA ESTADÍSTICAS SIMPLIFICADAS
+// ===============================================
+
+// Obtener tiempo total en horas (solo una función simple)
+function getTotalTimeHours() {
+    return testCases.reduce((total, tc) => {
+        return total + (parseFloat(tc.testTime) || 0);
+    }, 0);
+}
+
+// Obtener estadísticas simplificadas
+function getTimeStatistics() {
+    const casesWithTime = testCases.filter(tc => (tc.testTime || 0) > 0);
+    const totalHours = getTotalTimeHours();
+    
+    return {
+        casesWithTime: casesWithTime.length,
+        totalCases: testCases.length,
+        totalHours: totalHours,
+        averageTimePerCase: casesWithTime.length > 0 ? totalHours / casesWithTime.length : 0
+    };
 }
 
 // ===============================================
@@ -175,5 +221,8 @@ window.updateManualTime = function (id, value) {
 window.toggleRowTimer = toggleRowTimer;
 window.stopRowTimer = stopRowTimer;
 window.pauseTimer = pauseTimer;
+window.getTotalTimeHours = getTotalTimeHours;
+window.getTimeStatistics = getTimeStatistics;
+window.formatTimeDisplay = formatTimeDisplay;
 
-console.log('✅ timers.js cargado - Sistema de cronómetros completo');
+console.log('✅ timers.js cargado - Sistema simplificado con horas y cronómetro hh:mm');

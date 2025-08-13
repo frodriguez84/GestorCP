@@ -320,20 +320,13 @@ body {
 }
 
 .timer-icon {
-    font-size: 1.5em;
+    font-size: 1.8em;
     animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .timer-details {
@@ -343,19 +336,24 @@ body {
 .timer-details strong {
     display: block;
     color: var(--success-color);
-    font-size: 1.1em;
+    font-size: 1.2em;
+    margin-bottom: 4px;
 }
 
 .timer-display {
-    font-family: 'Courier New', monospace;
-    font-size: 1.8em;
-    font-weight: bold;
-    color: var(--success-color);
-    background: rgba(16, 185, 129, 0.1);
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    min-width: 100px;
-    text-align: center;
+    font-family: 'Courier New', 'Monaco', 'Menlo', monospace !important;
+    font-size: 2em !important;
+    font-weight: bold !important;
+    color: var(--success-color) !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+    padding: 10px 20px !important;
+    border-radius: var(--radius-sm) !important;
+    min-width: 100px !important;
+    text-align: center !important;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    transition: all 0.3s ease;
 }
 
 .timer-controls {
@@ -363,10 +361,186 @@ body {
     gap: var(--spacing-sm);
 }
 
+@keyframes timerGlow {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); 
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); 
+    }
+}
+
+/* Estados del botón de cronómetro mejorados */
+.btn[id^="timerBtn-"] {
+    min-width: 36px;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.btn[id^="timerBtn-"]:hover {
+    transform: scale(1.1);
+}
+
+/* Botón activo (detener) */
+.btn-danger[id^="timerBtn-"] {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    animation: buttonPulse 2s ease-in-out infinite;
+}
+
+@keyframes buttonPulse {
+    0%, 100% { 
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); 
+    }
+    50% { 
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6); 
+    }
+}
+
+/* ===============================================
+   RESPONSIVE - SIMPLIFICADO
+   =============================================== */
+
+@media (max-width: 768px) {
+    .col-tiempo {
+        min-width: 80px !important;
+        max-width: 80px !important;
+    }
+    
+    .col-tiempo input[type="number"] {
+        width: 60px !important;
+        font-size: 12px;
+    }
+    
+    .timer-display {
+        font-size: 1.6em !important;
+        min-width: 80px !important;
+        padding: 8px 12px !important;
+        letter-spacing: 1px;
+    }
+    
+    .timer-bar-content {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .timer-controls {
+        justify-content: center;
+    }
+    
+    /* Ocultar ícono en tarjeta en móvil */
+    #totalTimeCard div[style*="position: absolute"] {
+        display: none;
+    }
+}
+
+/* ===============================================
+   ANIMACIONES ADICIONALES
+   =============================================== */
+
+/* Animación al cambiar tiempo manualmente */
+@keyframes timeUpdated {
+    0% { 
+        background: rgba(102, 126, 234, 0.3); 
+        transform: scale(1.05);
+        border-color: #667eea;
+    }
+    100% { 
+        background: transparent; 
+        transform: scale(1);
+    }
+}
+
+.col-tiempo input.time-updated {
+    animation: timeUpdated 0.6s ease-out;
+}
+
+/* Pulso suave en tarjeta de tiempo */
+#totalTimeCard {
+    animation: cardBreath 4s ease-in-out infinite;
+}
+
+@keyframes cardBreath {
+    0%, 100% { 
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+    }
+    50% { 
+        box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+    }
+}
+
+/* ===============================================
+   UTILIDADES ADICIONALES
+   =============================================== */
+
+/* Tooltip mejorado para input de tiempo */
+.col-tiempo input[type="number"]:hover {
+    cursor: help;
+}
+
+/* Estado de input con valor */
+.col-tiempo input[type="number"]:not([value="0"]):not([value="0.00"]) {
+    background: linear-gradient(45deg, rgba(102, 126, 234, 0.05), rgba(102, 126, 234, 0.02));
+    font-weight: bold;
+}
+
+/* Indicador visual de cronómetro activo en la fila */
+tr[data-case-id] td {
+    transition: background-color 0.3s ease;
+}
+
+/* Fila con cronómetro activo */
+.timer-active-row {
+    background: rgba(16, 185, 129, 0.05) !important;
+    border-left: 4px solid var(--success-color) !important;
+}
+
+body.dark-mode .timer-active-row {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-left-color: var(--success-light) !important;
+}
+
+/* ===============================================
+   TARJETA DE TIEMPO TOTAL ÚNICA
+   =============================================== */
+
+/* Tarjeta de tiempo total */
+#totalTimeCard {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#totalTimeCard:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 15px 45px rgba(102, 126, 234, 0.4) !important;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+#totalTimeCard:active {
+    transform: translateY(-2px) scale(1.01);
+}
+
+/* Efecto de brillo en hover */
+#totalTimeCard:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+    left: 100%;
+}
+
+
 /* Modo oscuro */
 body.dark-mode .timer-active-bar {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
-    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+    border-color: rgba(16, 185, 129, 0.5);
 }
 
 body.dark-mode .timer-details strong {
@@ -374,10 +548,40 @@ body.dark-mode .timer-details strong {
 }
 
 body.dark-mode .timer-display {
-    color: var(--success-light);
-    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-light) !important;
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    text-shadow: 0 2px 4px rgba(16, 185, 129, 0.5);
 }
 
+body.dark-mode .col-tiempo input[type="number"] {
+    background: rgba(45, 52, 69, 0.9);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+body.dark-mode .col-tiempo input[type="number"]:focus {
+    border-color: var(--dark-accent);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.1);
+}
+
+body.dark-mode .col-tiempo input[type="number"]:hover {
+    border-color: var(--dark-accent);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+/* Tarjeta de tiempo en modo oscuro */
+body.dark-mode #totalTimeCard {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(79, 70, 229, 0.9)) !important;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+body.dark-mode #totalTimeCard:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 15px 45px rgba(139, 92, 246, 0.5) !important;
+    border-color: rgba(139, 92, 246, 0.5);
+}
 
 /* ===============================================
    ESTADÍSTICAS
@@ -522,9 +726,33 @@ th {
 }
 
 .col-tiempo {
-    min-width: 50px;
-    max-width: 75px;
-    text-align: center;
+    min-width: 100px !important;
+    max-width: 100px !important;
+    text-align: center !important;
+    padding: 8px 4px !important;
+}
+
+/* Input de tiempo en horas - estilo limpio */
+.col-tiempo input[type="number"] {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.col-tiempo input[type="number"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.col-tiempo input[type="number"]:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.02);
 }
 
 .col-evidencias,
