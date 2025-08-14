@@ -207,7 +207,16 @@ http-server
 - Los casos ocultos se mantienen guardados pero no aparecen en la vista principal
 - Se pueden mostrar nuevamente usando el toggle de filtros
 
-### **✅ 4. Selección Múltiple**
+### **📊 4. Sistema de Reportes**
+
+#### Generación de Reportes Profesionales
+
+* **Vista Previa** : Modal con preview completo del reporte antes de descargar
+* **Formato PDF** : Descarga directa en formato PDF
+* **Reporte Completo** : Incluye toda la información del proyecto de testing
+* **Timestamp** : Fecha y hora exacta de generación del reporte
+
+### **✅ 5. Selección Múltiple**
 
 #### Seleccionar Casos
 
@@ -221,8 +230,7 @@ http-server
 - **👁️‍🗨️ Ocultar Seleccionados**: Ocultar temporalmente casos no relevantes
 - **🗑️ Eliminar Seleccionados**: Borrar múltiples casos con renumeración automática
 
-
-### **5. Sistema de Rordenamiento Drag & Drop**
+### **6. Sistema de Rordenamiento Drag & Drop**
 
 * Arrastrar y soltar con handle dedicado
 * Reordenamiento de bloques completos
@@ -249,7 +257,7 @@ http-server
 
 * Agregado reordenamiento drag & drop
 
-### **📊 6. Reportes y Exportación**
+### **📊 7. Reportes y Exportación**
 
 #### Exportar a Excel
 
@@ -272,7 +280,7 @@ http-server
 3. **Verificar**: La aplicación detecta automáticamente casos, variables y evidencias
 4. **Confirmar**: Revisar resumen antes de aplicar cambios
 
-### **⚙️ 7. Tips y Mejores Prácticas**
+### **⚙️ 8. Tips y Mejores Prácticas**
 
 #### Organización por Ciclos
 
