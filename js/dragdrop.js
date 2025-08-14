@@ -966,7 +966,7 @@ window.renumberCycle1 = function () {
 // ===============================================
 
 // Función para crear/actualizar toolbar de reordenamiento
-function createReorderingToolbar() {
+/*function createReorderingToolbar() {
     // Verificar si ya existe
     let toolbar = document.getElementById('reorderingToolbar');
 
@@ -1001,14 +1001,14 @@ function createReorderingToolbar() {
     }
 
     return toolbar;
-}
+}*/
 
 // ===============================================
 // INICIALIZACIÓN DE INTEGRACIÓN
 // ===============================================
 
 // Función de inicialización completa
-function initializeDragDropIntegration() {
+/*function initializeDragDropIntegration() {
     // Crear toolbar de reordenamiento
     createReorderingToolbar();
 
@@ -1018,12 +1018,12 @@ function initializeDragDropIntegration() {
     }, 500);
 
     console.log('🔧 Integración de Drag & Drop inicializada');
-}
+}*/
 
 // Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function () {
+/*document.addEventListener('DOMContentLoaded', function () {
     setTimeout(initializeDragDropIntegration, 1000);
-});
+});*/
 
 // Inicializar sistema cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function () {
