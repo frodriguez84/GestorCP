@@ -117,12 +117,27 @@ window.openAddModal = function () {
     }
 
     document.getElementById('testCaseModal').style.display = 'block';
+    // 🆕 MARCAR COMO DUPLICACIÓN PENDIENTE
+    window.isDuplicating = true;
+    window.duplicatedCaseTemp = duplicatedCase;
 }
 
 window.openEditModal = function (id) {
-    currentEditingId = id;
+    console.log('✏️ Abriendo modal de edición para escenario:', id);
+
+    // 🎯 BUSCAR EN testCases GLOBAL (sincronizado con multicaso)
     const testCase = testCases.find(tc => tc.id === id);
-    if (!testCase) return;
+    if (!testCase) {
+        console.error('❌ Escenario no encontrado para editar:', id);
+        console.log('📊 testCases disponibles:', testCases.map(tc => ({ id: tc.id, scenario: tc.scenarioNumber })));
+        alert('❌ No se pudo encontrar el caso a editar');
+        return;
+    }
+
+    console.log('✅ Escenario encontrado para edición:', testCase.scenarioNumber);
+
+    currentEditingId = id;
+    window.isDuplicating = false; // 🎯 NO es duplicación
 
     document.getElementById('modalTitle').textContent = 'Editar Caso de Prueba';
 
@@ -158,6 +173,8 @@ window.openEditModal = function (id) {
     }
 
     document.getElementById('testCaseModal').style.display = 'block';
+
+    console.log('✅ Modal de edición abierto correctamente');
 }
 
 window.closeModal = function () {
@@ -299,11 +316,18 @@ function isLastScenario(scenarioNumber) {
 
 // FUNCIÓN PRINCIPAL - duplicateTestCase MEJORADA
 window.duplicateTestCase = function (id) {
+    console.log('🔄 Iniciando duplicación de escenario:', id);
+
+    // 🎯 BUSCAR EN testCases GLOBAL (sincronizado con multicaso)
     const originalCase = testCases.find(tc => tc.id === id);
     if (!originalCase) {
+        console.error('❌ Escenario no encontrado en testCases:', id);
+        console.log('📊 testCases disponibles:', testCases.map(tc => ({ id: tc.id, scenario: tc.scenarioNumber })));
         alert('❌ No se pudo encontrar el caso a duplicar');
         return;
     }
+
+    console.log('✅ Escenario encontrado:', originalCase.scenarioNumber);
 
     // Crear una copia profunda del caso original
     const duplicatedCase = JSON.parse(JSON.stringify(originalCase));
@@ -329,12 +353,19 @@ window.duplicateTestCase = function (id) {
 
         // Agregar al final (ya es la posición correcta)
         testCases.push(duplicatedCase);
+
+        // 🎯 SINCRONIZAR INMEDIATAMENTE CON MULTICASO
+        if (typeof syncScenariosWithCurrentCase === 'function') {
+            syncScenariosWithCurrentCase();
+        }
+
         saveToStorage();
         renderTestCases();
         updateStats();
         updateFilters();
 
         alert(`✅ Escenario ${duplicatedCase.scenarioNumber} (Ciclo 1) creado automáticamente`);
+        console.log('✅ Duplicación automática completada');
         return;
     }
 
@@ -344,6 +375,7 @@ window.duplicateTestCase = function (id) {
     // Guardar datos originales para comparación posterior
     window.originalScenarioForDuplication = originalScenarioNumber;
     window.duplicatedCaseTemp = duplicatedCase; // Guardar temporalmente sin agregar a la lista
+    window.isDuplicating = true; // 🎯 MARCAR COMO DUPLICACIÓN
 
     document.getElementById('modalTitle').textContent = '📋 Duplicar Caso de Prueba';
 
@@ -383,6 +415,8 @@ window.duplicateTestCase = function (id) {
         document.getElementById('scenarioNumber').focus();
         document.getElementById('scenarioNumber').select();
     }, 100);
+
+    console.log('✅ Modal de duplicación abierto');
 }
 
 // ===============================================
@@ -404,15 +438,30 @@ function smartRenumberAfterDeletion() {
 }
 
 window.deleteTestCase = function (id) {
+    console.log('🗑️ Iniciando eliminación de escenario:', id);
+
+    // 🎯 BUSCAR EN testCases GLOBAL (sincronizado con multicaso)
+    const deletedCase = testCases.find(tc => tc.id === id);
+    if (!deletedCase) {
+        console.error('❌ Escenario no encontrado para eliminar:', id);
+        console.log('📊 testCases disponibles:', testCases.map(tc => ({ id: tc.id, scenario: tc.scenarioNumber })));
+        alert('❌ No se pudo encontrar el caso a eliminar');
+        return;
+    }
+
     if (confirm('¿Estás seguro de que deseas eliminar este escenario de prueba?')) {
-        const deletedCase = testCases.find(tc => tc.id === id);
-        if (!deletedCase) return;
+        console.log('✅ Confirmada eliminación del escenario:', deletedCase.scenarioNumber);
 
         // Eliminar el caso
         testCases = testCases.filter(tc => tc.id !== id);
 
         // Aplicar renumeración inteligente
         smartRenumberAfterDeletion();
+
+        // 🎯 SINCRONIZAR INMEDIATAMENTE CON MULTICASO
+        if (typeof syncScenariosWithCurrentCase === 'function') {
+            syncScenariosWithCurrentCase();
+        }
 
         // Guardar cambios y actualizar la tabla
         saveToStorage();
@@ -426,6 +475,8 @@ window.deleteTestCase = function (id) {
         } else {
             alert(`✅ Escenario eliminado (Ciclo ${cycle} mantiene numeración original)`);
         }
+
+        console.log('✅ Eliminación completada correctamente');
     }
 };
 
@@ -578,6 +629,22 @@ window.renderTestCases = function () {
         `;
     }).join('');
 
+    // Solo actualizar si hay casos y no estamos ya en el proceso de actualizar filtros
+    if (filteredCases.length > 0 && !window.updatingFilters) {
+        setTimeout(() => {
+            window.updatingFilters = true;
+            if (typeof updateFilters === 'function') {
+                // Extraer testers únicos de testCases actual
+                const testers = [...new Set(testCases.map(tc => tc.tester).filter(t => t && t.trim() !== ''))];
+                if (testers.length > 0) {
+                    updateFilters();
+                    console.log('✅ Filtros actualizados después de renderizar casos');
+                }
+            }
+            window.updatingFilters = false;
+        }, 200);
+    }
+
     // Actualizar checkbox "Select All"
     updateSelectAllCheckbox();
 
@@ -638,10 +705,29 @@ window.applyFilters = function () {
 }
 
 window.updateFilters = function () {
+    // Evitar loops infinitos
+    if (window.updatingFilters) return;
+
+    console.log('🔄 Actualizando filtros...');
+
+    // 🎯 SINCRONIZAR PRIMERO CON MULTICASO SI ES NECESARIO
+    if (typeof syncScenariosWithCurrentCase === 'function') {
+        syncScenariosWithCurrentCase();
+    }
+
     // Actualizar filtro de testers
     const testerFilter = document.getElementById('testerFilter');
+    if (!testerFilter) {
+        console.warn('⚠️ No se encontró elemento testerFilter');
+        return;
+    }
+
     const currentTester = testerFilter.value;
-    const testers = [...new Set(testCases.map(tc => tc.tester).filter(t => t))];
+
+    // 🎯 OBTENER TESTERS DE testCases (sincronizado con multicaso)
+    const testers = [...new Set(testCases.map(tc => tc.tester).filter(t => t && t.trim() !== ''))];
+
+    console.log('📊 Testers encontrados:', testers);
 
     testerFilter.innerHTML = '<option value="">Todos</option>';
     testers.forEach(tester => {
@@ -655,6 +741,8 @@ window.updateFilters = function () {
     // Aplicar filtros iniciales
     filteredCases = [...testCases];
     applyFilters();
+
+    console.log('✅ Filtros actualizados - Testers disponibles:', testers.length);
 }
 
 // ===============================================
@@ -853,10 +941,21 @@ function formatDateForStorage(dateString) {
 
 
 // Funcion para actualizar la fecha al cambiar el resultado obtenido
+// Función para actualizar la fecha al cambiar el resultado obtenido - CORREGIDA
 window.updateStatusAndDate = function (id, value) {
+    console.log('🔄 Actualizando estado del escenario:', { id, value });
+
     const testCase = testCases.find(tc => tc.id === id);
     if (testCase) {
+        // Actualizar el estado
         testCase.status = value;
+
+        console.log('✅ Estado actualizado en testCases:', {
+            id: testCase.id,
+            scenario: testCase.scenarioNumber,
+            cycle: testCase.cycleNumber,
+            newStatus: value
+        });
 
         // Si no hay fecha y el status es OK o NO, poner la fecha de hoy
         if (!testCase.executionDate && (value === 'OK' || value === 'NO')) {
@@ -865,22 +964,53 @@ window.updateStatusAndDate = function (id, value) {
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             testCase.executionDate = `${yyyy}-${mm}-${dd}`;
+            console.log('📅 Fecha de ejecución establecida:', testCase.executionDate);
         }
 
-        // Actualización inmediata de estadísticas
+        // 🎯 CRÍTICO: Sincronizar INMEDIATAMENTE con multicaso
+        if (typeof syncScenariosWithCurrentCase === 'function') {
+            console.log('🔄 Sincronizando con sistema multicaso...');
+            syncScenariosWithCurrentCase();
+        }
+
+        // Guardar en sistema tradicional
         saveToStorage();
 
-        // Actualizar estadísticas inmediatamente (función existente)
+        // Actualizar estadísticas inmediatamente
         if (typeof updateStatsWithHidden === 'function') {
-            updateStatsWithHidden(); // Si tienes casos ocultos
+            updateStatsWithHidden();
         } else {
-            updateStats(); // Función básica
+            updateStats();
         }
 
-        // Actualizar filtros si es necesario (para mantener consistency)
+        // Actualizar filtros si es necesario
         applyFilters();
 
-        console.log(`✅ Estado actualizado: Escenario ${testCase.scenarioNumber} → ${value}`);
+        console.log(`✅ Estado actualizado y sincronizado: Escenario ${testCase.scenarioNumber} → ${value}`);
+
+        // 🎯 VERIFICAR que se guardó correctamente
+        setTimeout(() => {
+            const currentCase = getCurrentCase();
+            if (currentCase) {
+                const syncedScenario = currentCase.scenarios.find(s => s.id === id);
+                if (syncedScenario) {
+                    console.log('✅ Verificación post-sincronización:', {
+                        testCaseStatus: testCase.status,
+                        syncedStatus: syncedScenario.status,
+                        match: testCase.status === syncedScenario.status
+                    });
+
+                    if (testCase.status !== syncedScenario.status) {
+                        console.warn('⚠️ DESINCRONIZACIÓN DETECTADA - Reintentando...');
+                        syncScenariosWithCurrentCase();
+                    }
+                }
+            }
+        }, 100);
+
+    } else {
+        console.error('❌ No se encontró el escenario para actualizar:', id);
+        console.log('📊 IDs disponibles:', testCases.map(tc => ({ id: tc.id, scenario: tc.scenarioNumber })));
     }
 }
 

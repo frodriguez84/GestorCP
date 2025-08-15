@@ -390,7 +390,7 @@
                 </div>
 
                 <div class="controls">
-                    <button type="submit" class="btn btn-success" id="saveButton">💾 Guardar Caso</button>
+                    <button type="submit" class="btn btn-success" id="saveButton">💾 Guardar Escenario</button>
                     <button type="button" class="btn" id="btnCancelModal">❌ Cancelar</button>
                 </div>
             </form>
@@ -505,7 +505,9 @@
         </div>
     </div>
 
-    <!-- Scripts principales -->
+    <!-- SECCIÓN DE SCRIPTS CORREGIDA - Reemplazar en tu index.html -->
+
+    <!-- Scripts principales - ORDEN CORREGIDO PARA MULTICASO -->
     <script src="js/core.js"></script>
     <script src="js/multicase-core.js"></script>
     <script src="js/multicase-ui.js"></script>
@@ -525,6 +527,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
+        // 🎯 INICIALIZACIÓN INMEDIATA DEL SISTEMA MULTICASO
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚀 DOM cargado, inicializando sistema multicaso inmediatamente...');
+            
+            // Llamar directamente a la inicialización del sistema multicaso
+            if (typeof initializeMulticaseSystem === 'function') {
+                initializeMulticaseSystem();
+            }
+            
+            // Forzar actualización de UI multicaso después de un breve delay
+            setTimeout(() => {
+                if (typeof updateMulticaseUI === 'function') {
+                    updateMulticaseUI();
+                }
+            }, 100);
+        });
+
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -607,11 +626,6 @@
 
             console.log('📢 Notificación de actualización mostrada');
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        });
     </script>
 </body>
-
 </html>

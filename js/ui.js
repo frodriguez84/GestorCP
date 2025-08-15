@@ -569,6 +569,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // CRÍTICO: EVENT LISTENER PARA FORMULARIO PRINCIPAL DE CASOS
     // ===============================================
 
+    // ===============================================
+    // CRÍTICO: EVENT LISTENER PARA FORMULARIO PRINCIPAL DE CASOS - CORREGIDO
+    // ===============================================
+
     const testCaseForm = document.getElementById('testCaseForm');
     if (testCaseForm) {
         testCaseForm.addEventListener('submit', function (e) {
@@ -583,31 +587,31 @@ document.addEventListener('DOMContentLoaded', function () {
             const obtainedResult = document.getElementById('obtainedResult').value.trim();
             const status = document.getElementById('status').value;
             const executionDate = document.getElementById('executionDate').value;
-            const observations = document.getElementById('observations').value.trim(); // ✅ CRÍTICO
+            const observations = document.getElementById('observations').value.trim();
             const errorNumber = document.getElementById('errorNumber').value.trim();
             const tester = document.getElementById('tester').value.trim();
 
             // Validaciones
             if (!cycleNumber) {
-                alert('⚠ El Ciclo es obligatorio');
+                alert('⚠️ El Ciclo es obligatorio');
                 document.getElementById('cycleNumber').focus();
                 return;
             }
 
             if (!scenarioNumber) {
-                alert('⚠ El N° Escenario es obligatorio');
+                alert('⚠️ El N° Escenario es obligatorio');
                 document.getElementById('scenarioNumber').focus();
                 return;
             }
 
             if (!description) {
-                alert('⚠ La Descripción es obligatoria');
+                alert('⚠️ La Descripción es obligatoria');
                 document.getElementById('description').focus();
                 return;
             }
 
             if (!tester) {
-                alert('⚠ El Nombre del Tester es obligatorio');
+                alert('⚠️ El Nombre del Tester es obligatorio');
                 document.getElementById('tester').focus();
                 return;
             }
@@ -642,22 +646,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 obtainedResult,
                 status,
                 executionDate,
-                observations, // ✅ CRÍTICO: Incluir observaciones
+                observations,
                 errorNumber,
                 tester,
                 evidence,
                 testTime: 0 // Tiempo inicial en 0
             };
 
-            if (currentEditingId !== null) {
+            // 🎯 LÓGICA CORREGIDA PARA DUPLICACIÓN Y EDICIÓN
+            if (window.isDuplicating && window.duplicatedCaseTemp) {
+                console.log('📄 Procesando duplicación de escenario');
+
+                // Crear nuevo caso con los datos del formulario
+                const duplicatedCase = {
+                    ...testCaseData,
+                    id: Date.now(), // Nuevo ID único
+                    hidden: false
+                };
+
+                // Insertar en la posición correcta
+                insertCaseInCorrectPosition(duplicatedCase);
+
+                // Limpiar variables temporales
+                window.isDuplicating = false;
+                window.duplicatedCaseTemp = null;
+
+                console.log('✅ Caso duplicado creado:', duplicatedCase);
+
+            } else if (currentEditingId !== null) {
                 // ✅ EDITAR CASO EXISTENTE
                 const existingCase = testCases.find(tc => tc.id === currentEditingId);
                 if (existingCase) {
                     // Preservar tiempo existente
                     testCaseData.testTime = existingCase.testTime || 0;
                     Object.assign(existingCase, testCaseData);
+                    console.log('✅ Caso editado:', testCaseData);
+                } else {
+                    console.error('❌ No se encontró el caso a editar:', currentEditingId);
+                    alert('❌ Error: No se pudo encontrar el caso a editar');
+                    return;
                 }
-                console.log('✅ Caso editado:', testCaseData);
             } else {
                 // ✅ CREAR NUEVO CASO
                 const newCase = {
@@ -670,6 +698,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Nuevo caso creado:', newCase);
             }
 
+            // 🎯 SINCRONIZACIÓN INMEDIATA CON MULTICASO
+            if (typeof syncScenariosWithCurrentCase === 'function') {
+                syncScenariosWithCurrentCase();
+            }
+
             // Guardar y actualizar interfaz
             saveToStorage();
             renderTestCases();
@@ -677,8 +710,14 @@ document.addEventListener('DOMContentLoaded', function () {
             updateFilters();
             closeModal();
 
-            const action = currentEditingId !== null ? 'actualizado' : 'creado';
+            const action = currentEditingId !== null ? 'actualizado' :
+                window.isDuplicating ? 'duplicado' : 'creado';
             alert(`✅ Escenario ${action} correctamente`);
+
+            // Limpiar variables de estado
+            currentEditingId = null;
+            window.isDuplicating = false;
+            window.duplicatedCaseTemp = null;
         });
     }
 

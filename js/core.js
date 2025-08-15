@@ -116,41 +116,75 @@ function loadFromStorage() {
 }
 
 // ===============================================
-// FUNCIONES DE INICIALIZACIÓN
+// FUNCIONES DE INICIALIZACIÓN - SOLO MULTICASO
 // ===============================================
 
 function initializeApp() {
-    console.log('🚀 Inicializando aplicación...');
+    console.log('🚀 Inicializando aplicación en modo multicaso únicamente...');
 
-    // Cargar datos
+    // 🎯 PASO 1: Cargar datos del sistema original SOLO PARA MIGRACIÓN
     loadFromStorage();
 
-    // Configurar event listeners esenciales
+    // 🎯 PASO 2: Forzar activación inmediata del sistema multicaso
+    const loaded = loadMulticaseData();
+
+    if (!loaded) {
+        // Si no hay datos multicaso, migrar automáticamente
+        console.log('🔄 Migrando al sistema multicaso...');
+        enableMulticaseMode();
+    }
+
+    // 🎯 PASO 3: Configurar event listeners esenciales SOLO para multicaso
     setupEssentialEventListeners();
 
-    // Actualizar interfaz
-    if (typeof updateFilters === 'function') {
-        updateFilters();
-    }
+    // 🎯 PASO 4: Ocultar interfaz original INMEDIATAMENTE
+    hideOriginalInterface();
 
-    if (typeof renderTestCases === 'function') {
-        renderTestCases();
-    }
-
-    if (typeof updateRequirementDisplay === 'function') {
-        updateRequirementDisplay();
-    }
-
-    // Inicializar UI multicaso si está activo
+    // 🎯 PASO 5: Actualizar interfaz multicaso
     setTimeout(() => {
-        if (typeof isMulticaseMode === 'function' && isMulticaseMode()) {
-            if (typeof updateMulticaseUI === 'function') {
-                updateMulticaseUI();
-            }
+        if (typeof updateMulticaseUI === 'function') {
+            updateMulticaseUI();
         }
-    }, 100);
+        if (typeof renderTestCases === 'function') {
+            renderTestCases();
+        }
+        if (typeof updateStats === 'function') {
+            updateStats();
+        }
+        // 🎯 CRÍTICO: Actualizar filtros después de cargar datos
+        if (typeof updateFilters === 'function') {
+            updateFilters();
+            console.log('✅ Filtros actualizados automáticamente después de inicialización');
+        }
+    }, 50);
 
-    console.log('✅ Aplicación inicializada correctamente');
+    console.log('✅ Aplicación inicializada en modo multicaso únicamente');
+}
+
+// 🎯 FUNCIÓN PARA OCULTAR INTERFAZ ORIGINAL
+function hideOriginalInterface() {
+    // Ocultar card de información del requerimiento original
+    const oldRequirementInfo = document.getElementById('requirementInfo');
+    if (oldRequirementInfo) {
+        oldRequirementInfo.style.display = 'none';
+    }
+
+    // Ocultar cualquier otro elemento de la interfaz original
+    const elementsToHide = [
+        '.requirement-card',
+        '#currentCaseHeader'
+    ];
+
+    elementsToHide.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            if (el.id !== 'requirementHeader') { // No ocultar el header multicaso
+                el.style.display = 'none';
+            }
+        });
+    });
+
+    console.log('✅ Interfaz original ocultada');
 }
 
 function setupEssentialEventListeners() {
@@ -267,7 +301,7 @@ Esto eliminará:
 ⚠️ Esta acción NO se puede deshacer.`;
 
     if (confirm(confirmMessage)) {
-        // Limpiar variables
+        // Limpiar variables del sistema original
         testCases = [];
         filteredCases = [];
         inputVariableNames = ['Variable 1', 'Variable 2'];
@@ -282,6 +316,11 @@ Esto eliminará:
         };
         selectedCases.clear();
 
+        // 🎯 LIMPIAR TAMBIÉN SISTEMA MULTICASO
+        localStorage.removeItem('currentRequirement');
+        localStorage.removeItem('currentCaseId');
+        localStorage.removeItem('multicaseMode');
+
         // Detener cronómetro si está activo
         if (activeTimerId !== null && typeof stopRowTimer === 'function') {
             stopRowTimer();
@@ -293,11 +332,16 @@ Esto eliminará:
         localStorage.removeItem('requirementInfo');
         localStorage.removeItem('activeTab');
 
+        // 🎯 REINICIALIZAR SISTEMA MULTICASO
+        if (typeof enableMulticaseMode === 'function') {
+            enableMulticaseMode();
+        }
+
         // Actualizar interfaz
         if (typeof renderTestCases === 'function') renderTestCases();
         if (typeof updateStats === 'function') updateStats();
         if (typeof updateFilters === 'function') updateFilters();
-        if (typeof updateRequirementDisplay === 'function') updateRequirementDisplay();
+        if (typeof updateMulticaseUI === 'function') updateMulticaseUI();
 
         alert('✅ Todos los datos han sido eliminados correctamente');
         console.log('🗑️ Todos los datos eliminados');
@@ -305,7 +349,7 @@ Esto eliminará:
 }
 
 // ===============================================
-// INICIALIZACIÓN AL CARGAR LA PÁGINA
+// INICIALIZACIÓN AL CARGAR LA PÁGINA - SOLO MULTICASO
 // ===============================================
 
 // Auto-inicializar cuando el DOM esté listo
@@ -316,4 +360,4 @@ if (document.readyState === 'loading') {
     initializeApp();
 }
 
-console.log('✅ core.js cargado - Variables globales y funciones esenciales inicializadas');
+console.log('✅ core.js cargado - Sistema multicaso único inicializado');
