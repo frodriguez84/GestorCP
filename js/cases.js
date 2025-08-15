@@ -354,12 +354,19 @@ window.duplicateTestCase = function (id) {
         // Agregar al final (ya es la posición correcta)
         testCases.push(duplicatedCase);
 
-        // 🎯 SINCRONIZAR INMEDIATAMENTE CON MULTICASO
+        //  SINCRONIZAR INMEDIATAMENTE CON MULTICASO
+
         if (typeof syncScenariosWithCurrentCase === 'function') {
             syncScenariosWithCurrentCase();
         }
 
         saveToStorage();
+
+        //  NUEVO: Actualizar UI multicaso inmediatamente
+        if (typeof autoUpdateMulticaseUI === 'function') {
+            autoUpdateMulticaseUI();
+        }
+
         renderTestCases();
         updateStats();
         updateFilters();
@@ -465,6 +472,12 @@ window.deleteTestCase = function (id) {
 
         // Guardar cambios y actualizar la tabla
         saveToStorage();
+
+        // 🎯 NUEVO: Actualizar UI multicaso inmediatamente
+        if (typeof autoUpdateMulticaseUI === 'function') {
+            autoUpdateMulticaseUI();
+        }
+
         renderTestCases();
         updateStats();
         updateFilters();
@@ -942,6 +955,7 @@ function formatDateForStorage(dateString) {
 
 // Funcion para actualizar la fecha al cambiar el resultado obtenido
 // Función para actualizar la fecha al cambiar el resultado obtenido - CORREGIDA
+// Función para actualizar la fecha al cambiar el resultado obtenido - CON UI
 window.updateStatusAndDate = function (id, value) {
     console.log('🔄 Actualizando estado del escenario:', { id, value });
 
@@ -976,6 +990,11 @@ window.updateStatusAndDate = function (id, value) {
         // Guardar en sistema tradicional
         saveToStorage();
 
+        // 🎯 NUEVO: Actualizar UI multicaso inmediatamente
+        if (typeof autoUpdateMulticaseUI === 'function') {
+            autoUpdateMulticaseUI();
+        }
+
         // Actualizar estadísticas inmediatamente
         if (typeof updateStatsWithHidden === 'function') {
             updateStatsWithHidden();
@@ -986,27 +1005,7 @@ window.updateStatusAndDate = function (id, value) {
         // Actualizar filtros si es necesario
         applyFilters();
 
-        console.log(`✅ Estado actualizado y sincronizado: Escenario ${testCase.scenarioNumber} → ${value}`);
-
-        // 🎯 VERIFICAR que se guardó correctamente
-        setTimeout(() => {
-            const currentCase = getCurrentCase();
-            if (currentCase) {
-                const syncedScenario = currentCase.scenarios.find(s => s.id === id);
-                if (syncedScenario) {
-                    console.log('✅ Verificación post-sincronización:', {
-                        testCaseStatus: testCase.status,
-                        syncedStatus: syncedScenario.status,
-                        match: testCase.status === syncedScenario.status
-                    });
-
-                    if (testCase.status !== syncedScenario.status) {
-                        console.warn('⚠️ DESINCRONIZACIÓN DETECTADA - Reintentando...');
-                        syncScenariosWithCurrentCase();
-                    }
-                }
-            }
-        }, 100);
+        console.log(`✅ Estado actualizado, sincronizado y UI actualizada: Escenario ${testCase.scenarioNumber} → ${value}`);
 
     } else {
         console.error('❌ No se encontró el escenario para actualizar:', id);

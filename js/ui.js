@@ -703,8 +703,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 syncScenariosWithCurrentCase();
             }
 
+            // 🎯 SINCRONIZACIÓN INMEDIATA CON MULTICASO
+            if (typeof syncScenariosWithCurrentCase === 'function') {
+                syncScenariosWithCurrentCase();
+            }
+
             // Guardar y actualizar interfaz
             saveToStorage();
+
+            //  NUEVO: Actualizar UI multicaso inmediatamente
+            if (typeof autoUpdateMulticaseUI === 'function') {
+                autoUpdateMulticaseUI();
+            }
+
             renderTestCases();
             updateStats();
             updateFilters();

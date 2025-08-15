@@ -732,6 +732,39 @@ function closeNewCaseModal() {
     }
 }
 
+/**
+ * Actualiza automáticamente la UI multicaso después de cambios en escenarios
+ */
+function autoUpdateMulticaseUI() {
+    if (!isMulticaseMode()) return;
+    
+    console.log('🔄 Auto-actualizando UI multicaso...');
+    
+    // 1. Actualizar estadísticas del requerimiento
+    if (typeof updateRequirementStats === 'function' && currentRequirement) {
+        updateRequirementStats(currentRequirement);
+    }
+    
+    // 2. Actualizar header del requerimiento
+    if (typeof createRequirementHeader === 'function') {
+        createRequirementHeader();
+    }
+    
+    // 3. Actualizar navegación/tarjetas de casos
+    if (typeof createCaseNavigation === 'function') {
+        createCaseNavigation();
+    }
+    
+    // 4. Guardar cambios actualizados
+    if (typeof saveMulticaseData === 'function') {
+        saveMulticaseData();
+    }
+    
+    console.log('✅ UI multicaso auto-actualizada');
+}
+
+
+
 // ===============================================
 // EXPOSICIÓN GLOBAL
 // ===============================================
@@ -750,6 +783,7 @@ window.openEditCaseModal = openEditCaseModal;
 window.closeEditCaseModal = closeEditCaseModal;
 window.extractCaseNumber = extractCaseNumber;
 window.getFirstExecutionDate = getFirstExecutionDate;
+window.autoUpdateMulticaseUI = autoUpdateMulticaseUI;
 
 // ===============================================
 // AUTO-INICIALIZACIÓN

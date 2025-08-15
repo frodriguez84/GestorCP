@@ -217,20 +217,23 @@ window.updateManualTime = function (id, value) {
         const newTimeHours = Math.max(0, parseFloat(value) || 0);
         testCase.testTime = newTimeHours;
 
-        // ACTUALIZACIÓN INMEDIATA
+        // 🎯 NUEVO: Sincronizar con multicaso
+        if (typeof syncScenariosWithCurrentCase === 'function') {
+            syncScenariosWithCurrentCase();
+        }
+        
+        // 🎯 NUEVO: Actualizar UI multicaso inmediatamente
+        if (typeof autoUpdateMulticaseUI === 'function') {
+            autoUpdateMulticaseUI();
+        }
+
+        // ACTUALIZACIÓN INMEDIATA (existente)
         saveToStorage();
         renderTestCases();
         updateStats();
 
         console.log(`⏱️ Tiempo actualizado manualmente: Escenario ${testCase.scenarioNumber} → ${newTimeHours} horas`);
     }
-}
-
-// Función simplificada para formatear tiempo en hh:mm
-function formatTimeDisplay(totalMinutes) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = Math.floor(totalMinutes % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 

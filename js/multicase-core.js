@@ -532,6 +532,13 @@ function loadMulticaseData() {
             console.log('📁 Casos:', currentRequirement.cases.length);
             console.log('📄 Caso activo:', activeCase?.title || 'Ninguno');
 
+            // Actualizar UI inmediatamente después de cargar
+            setTimeout(() => {
+                if (typeof autoUpdateMulticaseUI === 'function') {
+                    autoUpdateMulticaseUI();
+                }
+            }, 100);
+
             return true;
         }
 
