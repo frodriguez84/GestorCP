@@ -105,7 +105,7 @@ function loadFromStorage() {
 
         console.log('✅ Datos cargados desde localStorage');
         console.log(`📊 ${testCases.length} casos cargados`);
-        
+
     } catch (e) {
         console.error('❌ Error cargando desde localStorage:', e);
         // Inicializar con valores por defecto
@@ -121,26 +121,35 @@ function loadFromStorage() {
 
 function initializeApp() {
     console.log('🚀 Inicializando aplicación...');
-    
+
     // Cargar datos
     loadFromStorage();
-    
+
     // Configurar event listeners esenciales
     setupEssentialEventListeners();
-    
+
     // Actualizar interfaz
     if (typeof updateFilters === 'function') {
         updateFilters();
     }
-    
+
     if (typeof renderTestCases === 'function') {
         renderTestCases();
     }
-    
+
     if (typeof updateRequirementDisplay === 'function') {
         updateRequirementDisplay();
     }
-    
+
+    // Inicializar UI multicaso si está activo
+    setTimeout(() => {
+        if (typeof isMulticaseMode === 'function' && isMulticaseMode()) {
+            if (typeof updateMulticaseUI === 'function') {
+                updateMulticaseUI();
+            }
+        }
+    }, 100);
+
     console.log('✅ Aplicación inicializada correctamente');
 }
 
@@ -231,7 +240,7 @@ function setupModalEventListeners() {
     }
 
     // Cerrar modales al hacer clic fuera
-    window.addEventListener('click', function(event) {
+    window.addEventListener('click', function (event) {
         const modals = ['testCaseModal', 'evidenceViewModal', 'configVarsModal', 'requirementModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);

@@ -387,8 +387,8 @@ window.openRequirementModal = function () {
     document.getElementById('reqNumber').value = requirementInfo.number || '';
     document.getElementById('reqName').value = requirementInfo.name || '';
     document.getElementById('reqDescription').value = requirementInfo.description || '';
-    document.getElementById('reqCase').value = requirementInfo.caso || '';
-    document.getElementById('reqTitleCase').value = requirementInfo.titleCase || '';
+    /*document.getElementById('reqCase').value = requirementInfo.caso || '';*/
+    /*document.getElementById('reqTitleCase').value = requirementInfo.titleCase || '';*/
     document.getElementById('reqTester').value = requirementInfo.tester || '';
     document.getElementById('reqStartDate').value = requirementInfo.startDate || '';
 
@@ -510,6 +510,7 @@ function reinitializeDragScrollFunction() {
         initializeDragScroll();
     }, 100);
 }
+
 
 // ===============================================
 // EVENT LISTENERS PRINCIPALES
@@ -706,15 +707,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 number: number,
                 name: name,
                 description: document.getElementById('reqDescription').value.trim(),
-                caso: document.getElementById('reqCase').value.trim(),
-                titleCase: document.getElementById('reqTitleCase').value.trim(),
+                /*caso: document.getElementById('reqCase').value.trim(),*/
+                /*titleCase: document.getElementById('reqTitleCase').value.trim(),*/
                 tester: document.getElementById('reqTester').value.trim(),
                 startDate: document.getElementById('reqStartDate').value
             };
 
             saveRequirementInfo();
             updateRequirementDisplay();
+
+            // 🆕 SINCRONIZAR con datos multicaso
+            if (typeof syncRequirementData === 'function') {
+                syncRequirementData();
+            }
+
+            // 🆕 ACTUALIZAR UI multicaso
+            if (typeof updateMulticaseUI === 'function') {
+                updateMulticaseUI();
+            }
+
             closeRequirementModal();
+
 
             alert('✅ Información del requerimiento guardada correctamente');
         });
@@ -739,6 +752,39 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('✅ Sistema de tabs y UI inicializado correctamente');
 });
 
+// ===============================================
+// SINCRONIZACIÓN DE DATOS
+// ===============================================
+
+/**
+ * Sincroniza los datos del requerimiento entre el sistema antiguo y multicaso
+ */
+function syncRequirementData() {
+    if (!currentRequirement) {
+        console.log('⚠️ No hay requerimiento multicaso activo para sincronizar');
+        return;
+    }
+
+    if (requirementInfo && typeof requirementInfo === 'object') {
+        // Sincronizar desde requirementInfo hacia currentRequirement.info
+        currentRequirement.info = { ...currentRequirement.info, ...requirementInfo };
+        currentRequirement.updatedAt = new Date().toISOString();
+
+        // Guardar datos multicaso
+        saveMulticaseData();
+
+        // Actualizar UI multicaso si existe
+        if (typeof updateMulticaseUI === 'function') {
+            updateMulticaseUI();
+        }
+
+        console.log('✅ Datos del requerimiento sincronizados');
+        console.log('📋 Datos sincronizados:', currentRequirement.info);
+    } else {
+        console.log('⚠️ No hay datos en requirementInfo para sincronizar');
+    }
+}
+
 
 
 // ===============================================
@@ -750,6 +796,7 @@ window.switchTab = switchTab;
 window.updateDevButtons = updateDevButtons;
 window.updateRequirementDisplay = updateRequirementDisplay;
 window.reinitializeDragScroll = reinitializeDragScrollFunction;
+window.syncRequirementData = syncRequirementData;
 
 // Debug function para desarrolladores
 window.getTabsInfo = function () {
