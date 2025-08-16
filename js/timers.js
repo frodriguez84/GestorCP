@@ -6,6 +6,22 @@
 // CRONÓMETROS EN FILAS - SISTEMA PRINCIPAL
 // ===============================================
 
+// ===============================================
+// FUNCIONES DE FORMATEO DE TIEMPO
+// ===============================================
+
+// Función para formatear minutos a formato hh:mm
+function formatTimeDisplay(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.floor(totalMinutes % 60);
+    
+    // Formatear con ceros a la izquierda
+    const hoursStr = hours.toString().padStart(2, '0');
+    const minutesStr = minutes.toString().padStart(2, '0');
+    
+    return `${hoursStr}:${minutesStr}`;
+}
+
 // Funcion iniciar cronometro en filas
 function toggleRowTimer(id) {
     if (activeTimerId === id) {

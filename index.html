@@ -6,11 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casos de Prueba</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/multicase-styles.css">
+    <!-- ✅ SOLO UN ARCHIVO CSS UNIFICADO -->
+    <link rel="stylesheet" href="css/finalStyles.css">
 </head>
 
 <body>
+    <!-- 🚀 LOADER ANTI-FLASH - SE MUESTRA INMEDIATAMENTE -->
+    <div id="antiFlashLoader">
+        <div class="loader-content">
+            <div class="loader-icon">📋</div>
+            <div class="loader-title">Casos de Prueba</div>
+            <div class="loader-subtitle">Inicializando sistema multicaso...</div>
+            <div class="loader-progress">
+                <div class="loader-progress-bar" id="loaderProgressBar"></div>
+            </div>
+            <div class="loader-status" id="loaderStatus">Cargando componentes...</div>
+        </div>
+    </div>
+
+    <!-- ✅ INTERFAZ PRINCIPAL - OCULTA HASTA QUE ESTÉ READY -->
     <div class="container">
         <div class="header">
             <h1>📋 Casos de Prueba</h1>
@@ -27,9 +41,6 @@
                 <div class="tab-content-container">
                     <!-- Tab 1: Gestión -->
                     <div class="tab-content tab-active" id="tab-gestion">
-                        <button class="btn btn-success" id="btnNewRequirement" style="display: none;">
-                            ➕ Nuevo Requerimiento
-                        </button>
                         <button class="btn btn-success" id="btnAddCase">➕ Nuevo Escenario</button>
                         <button class="btn btn-info" id="btnGenerateReport">📊 Generar Reporte</button>
                     </div>
@@ -48,8 +59,8 @@
 
                     <!-- Tab 4: Configuración -->
                     <div class="tab-content" id="tab-config">
-                        <button class="btn btn-info" onclick="openRequirementModal()">🎯 Editar Requerimiento</button>
-                        <button class="btn btn-variable" id="btnConfigVars">⚙️ Editar Variables</button>
+                        <button class="btn btn-info" onclick="openRequirementModal()">🎯 Requerimiento Setup</button>
+                        <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
 
 
                         <!-- Switch de Tema aquí -->
@@ -79,7 +90,7 @@
             </div>
         </div>
 
-        <!-- InformacIón del Requerimiento -->
+        <!-- Información del Requerimiento -->
         <div class="requirement-info" id="requirementInfo">
             <div class="requirement-card">
                 <div class="requirement-header">
@@ -509,9 +520,9 @@
         </div>
     </div>
 
-    <!-- SECCIÓN DE SCRIPTS CORREGIDA - Reemplazar en tu index.html -->
+    <!-- 🚀 SECCIÓN DE SCRIPTS CON INICIALIZACIÓN ANTI-FLASH -->
 
-    <!-- Scripts principales - ORDEN CORREGIDO PARA MULTICASO -->
+    <!-- Scripts principales - ORDEN CORRECTO PARA MULTICASO -->
     <script src="js/core.js"></script>
     <script src="js/multicase-core.js"></script>
     <script src="js/multicase-ui.js"></script>
@@ -531,20 +542,102 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
-        // 🎯 INICIALIZACIÓN INMEDIATA DEL SISTEMA MULTICASO
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('🚀 DOM cargado, inicializando sistema multicaso inmediatamente...');
+        // 🎯 SISTEMA ANTI-FLASH COMPLETO
 
-            // Llamar directamente a la inicialización del sistema multicaso
-            if (typeof initializeMulticaseSystem === 'function') {
-                initializeMulticaseSystem();
+        // Variables globales para el loader
+        let loaderProgressInterval;
+        let currentProgress = 0;
+
+        // Función para actualizar el progreso del loader
+        function updateLoaderProgress(progress, status) {
+            const progressBar = document.getElementById('loaderProgressBar');
+            const statusElement = document.getElementById('loaderStatus');
+
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
             }
 
-            // Forzar actualización de UI multicaso después de un breve delay
+            if (statusElement && status) {
+                statusElement.textContent = status;
+            }
+
+            currentProgress = progress;
+        }
+
+        // Función para finalizar el loader
+        function finishLoader() {
+            console.log('🎯 Finalizando loader anti-flash...');
+
+            // Completar progreso
+            updateLoaderProgress(100, 'Sistema listo ✓');
+
+            // Delay para mostrar 100% completado
             setTimeout(() => {
-                if (typeof updateMulticaseUI === 'function') {
-                    updateMulticaseUI();
+                // Marcar el body como ready
+                document.body.classList.add('multicase-ready');
+
+                console.log('✅ Sistema multicaso completamente iniciado sin flash');
+
+                // Limpiar el loader después de la transición
+                setTimeout(() => {
+                    const loader = document.getElementById('antiFlashLoader');
+                    if (loader) {
+                        loader.remove();
+                    }
+                }, 500);
+            }, 200);
+        }
+
+        // Inicialización progresiva del loader
+        function startProgressAnimation() {
+            loaderProgressInterval = setInterval(() => {
+                if (currentProgress < 70) {
+                    currentProgress += Math.random() * 15 + 5;
+                    currentProgress = Math.min(currentProgress, 70);
+
+                    let status = 'Cargando componentes...';
+                    if (currentProgress > 20) status = 'Inicializando sistema multicaso...';
+                    if (currentProgress > 40) status = 'Configurando interfaz...';
+                    if (currentProgress > 60) status = 'Sincronizando datos...';
+
+                    updateLoaderProgress(currentProgress, status);
+                } else {
+                    clearInterval(loaderProgressInterval);
                 }
+            }, 150);
+        }
+
+        // ⚡ INICIALIZACIÓN INMEDIATA - ANTES DE DOM READY
+        console.log('🚀 Iniciando sistema anti-flash...');
+        startProgressAnimation();
+        updateLoaderProgress(5, 'Inicializando...');
+
+        // 📋 INICIALIZACIÓN PRINCIPAL DEL SISTEMA MULTICASO
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🔧 DOM cargado, iniciando componentes del sistema...');
+
+            // Progreso de inicialización
+            updateLoaderProgress(75, 'Inicializando multicaso...');
+
+            // Llamar directamente a la inicialización del sistema multicaso
+            setTimeout(() => {
+                if (typeof initializeMulticaseSystem === 'function') {
+                    console.log('🎯 Ejecutando initializeMulticaseSystem...');
+                    initializeMulticaseSystem();
+                    updateLoaderProgress(85, 'Sistema multicaso iniciado...');
+                }
+
+                // Forzar actualización de UI multicaso después de un breve delay
+                setTimeout(() => {
+                    if (typeof updateMulticaseUI === 'function') {
+                        console.log('🎨 Ejecutando updateMulticaseUI...');
+                        updateMulticaseUI();
+                        updateLoaderProgress(95, 'Actualizando interfaz...');
+                    }
+
+                    // Finalizar loader
+                    setTimeout(finishLoader, 300);
+                }, 200);
             }, 100);
         });
 
