@@ -1183,7 +1183,7 @@ function applyImportedDataComplete(importedData, requirementData) {
 //      LIMPIAR TODOS LOS DATOS
 //==============================
 
-window.clearAllData = function () {
+/*window.clearAllData = function () {
     if (confirm('⚠️ ¿Estás seguro de que deseas eliminar TODOS los datos?\n\n• Escenarios de prueba\n• Información del requerimiento\n• Variables configuradas\n\nEsta acción no se puede deshacer.')) {
         if (confirm('🚨 CONFIRMACIÓN FINAL: Se eliminarán todos los datos. ¿Continuar?')) {
             // Limpiar casos de prueba
@@ -1216,7 +1216,7 @@ window.clearAllData = function () {
             alert('✅ Todos los datos han sido eliminados:\n\n• Escenarios de prueba\n• Información del requerimiento\n• Variables configuradas');
         }
     }
-}
+}*/
 
 // Función para exportar información del requerimiento (para reportes)
 window.getRequirementInfoForExport = function () {

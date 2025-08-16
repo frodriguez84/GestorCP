@@ -232,7 +232,7 @@ function openReportPreview() {
         
         // Validar que hay datos
         if (testCases.length === 0) {
-            alert('⚠️ No hay casos de prueba para generar reporte');
+            alert('⚠️ No hay escenarios de prueba para generar reporte');
             return;
         }
 

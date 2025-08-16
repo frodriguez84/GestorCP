@@ -337,6 +337,20 @@ function updateRequirementDisplay() {
     }
 }
 
+/**
+ * Actualiza visibilidad de botones según estado del requerimiento
+ */
+function updateRequirementButtons() {
+    const btnNewRequirement = document.getElementById('btnNewRequirement');
+    const hasReq = hasActiveRequirement();
+
+    if (btnNewRequirement) {
+        btnNewRequirement.style.display = hasReq ? 'none' : 'inline-flex';
+    }
+
+    console.log('🔄 Botones actualizados:', { hasRequirement: hasReq });
+}
+
 // Helper para actualizar campos individuales
 function updateFieldDisplay(elementId, value) {
     const element = document.getElementById(elementId);
@@ -383,6 +397,19 @@ function formatDisplayDate(dateString) {
 
 // Abrir modal de edición
 window.openRequirementModal = function () {
+    const hasReq = hasActiveRequirement();
+
+    // Si no existe requerimiento y viene desde "Requerimiento Setup"
+    if (!hasReq) {
+        const isFromSetup = document.activeElement &&
+            document.activeElement.textContent &&
+            document.activeElement.textContent.includes('Setup');
+        if (isFromSetup) {
+            alert('⚠️ Debe crear un requerimiento antes de poder configurarlo.\n\nUse el botón "Nuevo Requerimiento" para comenzar.');
+            return;
+        }
+    }
+
     // Llenar formulario con datos actuales
     document.getElementById('reqNumber').value = requirementInfo.number || '';
     document.getElementById('reqName').value = requirementInfo.name || '';
@@ -569,10 +596,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // CRÍTICO: EVENT LISTENER PARA FORMULARIO PRINCIPAL DE CASOS
     // ===============================================
 
-    // ===============================================
-    // CRÍTICO: EVENT LISTENER PARA FORMULARIO PRINCIPAL DE CASOS - CORREGIDO
-    // ===============================================
-
     const testCaseForm = document.getElementById('testCaseForm');
     if (testCaseForm) {
         testCaseForm.addEventListener('submit', function (e) {
@@ -653,7 +676,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 testTime: 0 // Tiempo inicial en 0
             };
 
-            // 🎯 LÓGICA CORREGIDA PARA DUPLICACIÓN Y EDICIÓN
+            //  LÓGICA CORREGIDA PARA DUPLICACIÓN Y EDICIÓN
             if (window.isDuplicating && window.duplicatedCaseTemp) {
                 console.log('📄 Procesando duplicación de escenario');
 
@@ -698,12 +721,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('✅ Nuevo caso creado:', newCase);
             }
 
-            // 🎯 SINCRONIZACIÓN INMEDIATA CON MULTICASO
+            //  SINCRONIZACIÓN INMEDIATA CON MULTICASO
             if (typeof syncScenariosWithCurrentCase === 'function') {
                 syncScenariosWithCurrentCase();
             }
 
-            // 🎯 SINCRONIZACIÓN INMEDIATA CON MULTICASO
+            //  SINCRONIZACIÓN INMEDIATA CON MULTICASO
             if (typeof syncScenariosWithCurrentCase === 'function') {
                 syncScenariosWithCurrentCase();
             }
@@ -766,6 +789,11 @@ document.addEventListener('DOMContentLoaded', function () {
             saveRequirementInfo();
             updateRequirementDisplay();
 
+            // ✅ CREAR REQUERIMIENTO MULTICASO SI NO EXISTE:
+            if (!currentRequirement) {
+                enableMulticaseMode();
+            }
+
             // 🆕 SINCRONIZAR con datos multicaso
             if (typeof syncRequirementData === 'function') {
                 syncRequirementData();
@@ -776,7 +804,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateMulticaseUI();
             }
 
+            // ✅ MOSTRAR ELEMENTOS MULTICASO:
+            const caseNavigation = document.getElementById('caseNavigation');
+            if (caseNavigation) caseNavigation.style.display = 'block';
+
+            const currentCaseHeader = document.getElementById('currentCaseHeader');
+            if (currentCaseHeader) currentCaseHeader.style.display = 'flex';
+
             closeRequirementModal();
+            updateRequirementButtons();
 
 
             alert('✅ Información del requerimiento guardada correctamente');
@@ -847,6 +883,7 @@ window.updateDevButtons = updateDevButtons;
 window.updateRequirementDisplay = updateRequirementDisplay;
 window.reinitializeDragScroll = reinitializeDragScrollFunction;
 window.syncRequirementData = syncRequirementData;
+window.updateRequirementButtons = updateRequirementButtons;
 
 // Debug function para desarrolladores
 window.getTabsInfo = function () {

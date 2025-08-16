@@ -52,6 +52,13 @@ function createEmptyRequirement() {
     };
 }
 
+/**
+ * Verifica si existe un requerimiento activo
+ */
+function hasActiveRequirement() {
+    return currentRequirement !== null;
+}
+
 // ===============================================
 // ESTRUCTURA DEL CASO
 // ===============================================
@@ -877,5 +884,6 @@ window.debugStates = function () {
 
 // Exportar función de inicialización
 window.initializeMulticaseSystem = initializeMulticaseSystem;
+window.hasActiveRequirement = hasActiveRequirement;
 
 console.log('✅ multicase-core.js cargado - Sistema multicaso mejorado inicializado');

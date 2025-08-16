@@ -10,35 +10,47 @@
  * Crea y actualiza el header principal del requerimiento (MEJORADO)
  */
 function createRequirementHeader() {
+    if (!hasActiveRequirement()) {
+        // Si no hay requerimiento, ocultar header existente
+        const headerContainer = document.getElementById('requirementHeader');
+        if (headerContainer) {
+            headerContainer.style.display = 'none';
+        }
+        return;
+    }
+
     let headerContainer = document.getElementById('requirementHeader');
-    
+
     if (!headerContainer) {
         headerContainer = document.createElement('div');
         headerContainer.id = 'requirementHeader';
         headerContainer.className = 'requirement-header-multicaso';
-        
+
         // Insertar después del header actual
         const currentHeader = document.querySelector('.header');
         if (currentHeader) {
             currentHeader.parentNode.insertBefore(headerContainer, currentHeader.nextSibling);
         }
-        
+
         // OCULTAR la card vieja para evitar duplicación
         const oldRequirementInfo = document.getElementById('requirementInfo');
         if (oldRequirementInfo) {
             oldRequirementInfo.style.display = 'none';
         }
+    } else {
+        // Asegurar que esté visible cuando hay requerimiento
+        headerContainer.style.display = 'block';
     }
-    
+
     const requirement = currentRequirement;
     if (!requirement) return;
-    
+
     const stats = requirement.stats;
     const currentCase = getCurrentCase();
-    
+
     // Calcular fecha del primer escenario ejecutado del caso actual
     const firstExecutionDate = currentCase ? getFirstExecutionDate(currentCase) : null;
-    
+
     headerContainer.innerHTML = `
         <div class="requirement-header-content">
             <!-- SECCIÓN SUPERIOR: DATOS DEL REQUERIMIENTO -->
@@ -117,7 +129,7 @@ function createRequirementHeader() {
             </button>
         </div>
     `;
-    
+
     console.log('✅ Requirement header mejorado actualizado');
 }
 
@@ -126,12 +138,12 @@ function createRequirementHeader() {
  */
 function extractCaseNumber(caseObj) {
     if (!caseObj) return '-';
-    
+
     // Usar el campo caseNumber si existe, sino extraer del título
     if (caseObj.caseNumber) {
         return caseObj.caseNumber;
     }
-    
+
     // Fallback: extraer del título
     const match = caseObj.title.match(/(?:caso|case)\s*(\d+)/i) || caseObj.title.match(/^(\d+)$/);
     return match ? match[1] : caseObj.title;
@@ -142,21 +154,21 @@ function extractCaseNumber(caseObj) {
  */
 function getFirstExecutionDate(caseObj) {
     if (!caseObj || !caseObj.scenarios) return null;
-    
+
     // Filtrar solo escenarios ejecutados (OK o NO)
-    const executedScenarios = caseObj.scenarios.filter(scenario => 
+    const executedScenarios = caseObj.scenarios.filter(scenario =>
         scenario.status === 'OK' || scenario.status === 'NO'
     );
-    
+
     if (executedScenarios.length === 0) return null;
-    
+
     // Ordenar por fecha de ejecución y tomar el primero
     executedScenarios.sort((a, b) => {
         const dateA = new Date(a.executionDate || '9999-12-31');
         const dateB = new Date(b.executionDate || '9999-12-31');
         return dateA - dateB;
     });
-    
+
     return executedScenarios[0].executionDate;
 }
 
@@ -169,27 +181,27 @@ function getFirstExecutionDate(caseObj) {
  */
 function createCaseNavigation() {
     let navigationContainer = document.getElementById('caseNavigation');
-    
+
     if (!navigationContainer) {
         navigationContainer = document.createElement('div');
         navigationContainer.id = 'caseNavigation';
         navigationContainer.className = 'case-navigation';
-        
+
         // Insertar después del requirement header
         const requirementHeader = document.getElementById('requirementHeader');
         if (requirementHeader) {
             requirementHeader.parentNode.insertBefore(navigationContainer, requirementHeader.nextSibling);
         }
     }
-    
+
     const requirement = currentRequirement;
     if (!requirement || !requirement.cases) return;
-    
+
     const caseTabs = requirement.cases.map(caseObj => {
         const isActive = caseObj.id === currentCaseId;
         const scenarios = caseObj.scenarios.length;
         const hours = caseObj.stats.totalHours.toFixed(1);
-        
+
         return `
             <div class="case-tab ${isActive ? 'case-tab-active' : ''}" 
                  onclick="switchToCaseUI('${caseObj.id}')" 
@@ -217,7 +229,7 @@ function createCaseNavigation() {
             </div>
         `;
     }).join('');
-    
+
     navigationContainer.innerHTML = `
         <div class="case-navigation-content">
             <div class="case-tabs-container">
@@ -229,7 +241,7 @@ function createCaseNavigation() {
             </div>
         </div>
     `;
-    
+
     console.log('✅ Case navigation actualizada');
 }
 
@@ -242,28 +254,28 @@ function createCaseNavigation() {
  */
 function switchToCaseUI(caseId) {
     console.log('🔄 Cambiando a caso:', caseId);
-    
+
     const success = switchToCase(caseId);
     if (success) {
         // Actualizar navegación
         updateCaseNavigation();
-        
+
         // 🆕 ACTUALIZAR HEADER DEL REQUERIMIENTO (para "N° Caso Actual")
         createRequirementHeader();
-        
+
         // Actualizar contenido del caso
         updateCurrentCaseContent();
-        
+
         // Actualizar estadísticas
         if (typeof updateStats === 'function') {
             updateStats();
         }
-        
+
         // Actualizar tabla de escenarios
         if (typeof renderTestCases === 'function') {
             renderTestCases();
         }
-        
+
         console.log('✅ Cambiado a caso exitosamente');
     }
 }
@@ -277,21 +289,21 @@ function deleteCaseUI(caseId, event) {
         event.stopPropagation();
         event.preventDefault();
     }
-    
+
     const caseObj = currentRequirement.cases.find(c => c.id === caseId);
     if (!caseObj) return;
-    
+
     const confirmMessage = `⚠️ ¿Eliminar "${caseObj.title}"?\n\n` +
         `• ${caseObj.scenarios.length} escenarios se perderán\n` +
         `• ${caseObj.stats.totalHours.toFixed(1)} horas de trabajo\n\n` +
         `Esta acción no se puede deshacer.`;
-    
+
     if (confirm(confirmMessage)) {
         const success = deleteCase(caseId);
         if (success) {
             // Actualizar UI completa
             updateMulticaseUI();
-            
+
             alert(`✅ "${caseObj.title}" eliminado correctamente`);
         }
     }
@@ -306,10 +318,10 @@ function editCaseUI(caseId, event) {
         event.stopPropagation();
         event.preventDefault();
     }
-    
+
     const caseObj = currentRequirement.cases.find(c => c.id === caseId);
     if (!caseObj) return;
-    
+
     openEditCaseModal(caseObj);
 }
 
@@ -326,7 +338,7 @@ function updateCaseNavigation() {
 function updateCurrentCaseContent() {
     const currentCase = getCurrentCase();
     if (!currentCase) return;
-    
+
     // Actualizar título del caso en algún lugar visible
     updateCurrentCaseHeader(currentCase);
 }
@@ -337,19 +349,19 @@ function updateCurrentCaseContent() {
 function updateCurrentCaseHeader(caseObj) {
     // Buscar si hay algún elemento donde mostrar info del caso actual
     let caseHeader = document.getElementById('currentCaseHeader');
-    
+
     if (!caseHeader) {
         caseHeader = document.createElement('div');
         caseHeader.id = 'currentCaseHeader';
         caseHeader.className = 'current-case-header';
-        
+
         // Insertar antes de los filtros actuales
         const filters = document.querySelector('.filters');
         if (filters) {
             filters.parentNode.insertBefore(caseHeader, filters);
         }
     }
-    
+
     caseHeader.innerHTML = `
         <div class="current-case-info">
             <h3 class="current-case-title">📁 Caso ${caseObj.caseNumber}</h3>
@@ -375,7 +387,7 @@ function updateCurrentCaseHeader(caseObj) {
 function openNewCaseModal() {
     // Crear modal si no existe
     let modal = document.getElementById('newCaseModal');
-    
+
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'newCaseModal';
@@ -420,21 +432,21 @@ function openNewCaseModal() {
             </div>
         `;
         document.body.appendChild(modal);
-        
+
         // Agregar event listener al formulario
         document.getElementById('newCaseForm').addEventListener('submit', handleNewCaseSubmit);
     }
-    
+
     // Limpiar formulario
     document.getElementById('newCaseNumber').value = '';
     document.getElementById('newCaseTitle').value = '';
     document.getElementById('newCaseObjective').value = '';
     document.getElementById('newCasePrerequisites').value = '';
     document.getElementById('newCaseVariables').value = 'Variable 1, Variable 2';
-    
+
     // Mostrar modal
     modal.style.display = 'block';
-    
+
     // Focus en título
     setTimeout(() => {
         document.getElementById('newCaseTitle').focus();
@@ -447,7 +459,7 @@ function openNewCaseModal() {
 function openEditCaseModal(caseObj) {
     // Crear modal si no existe
     let modal = document.getElementById('editCaseModal');
-    
+
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'editCaseModal';
@@ -489,11 +501,11 @@ function openEditCaseModal(caseObj) {
             </div>
         `;
         document.body.appendChild(modal);
-        
+
         // Agregar event listener al formulario
         document.getElementById('editCaseForm').addEventListener('submit', handleEditCaseSubmit);
     }
-    
+
     // Llenar formulario con datos del caso
     document.getElementById('editCaseId').value = caseObj.id;
     document.getElementById('editCaseNumber').value = caseObj.caseNumber || '';
@@ -501,10 +513,10 @@ function openEditCaseModal(caseObj) {
     document.getElementById('editCaseObjective').value = caseObj.objective || '';
     document.getElementById('editCasePrerequisites').value = caseObj.prerequisites || '';
     document.getElementById('editCaseVariables').value = (caseObj.inputVariableNames || []).join(', ');
-    
+
     // Mostrar modal
     modal.style.display = 'block';
-    
+
     // Focus en número
     setTimeout(() => {
         document.getElementById('editCaseNumber').focus();
@@ -526,38 +538,38 @@ function closeEditCaseModal() {
  */
 function handleEditCaseSubmit(e) {
     e.preventDefault();
-    
+
     const caseId = document.getElementById('editCaseId').value;
     const caseNumber = document.getElementById('editCaseNumber').value.trim();
     const title = document.getElementById('editCaseTitle').value.trim();
     const objective = document.getElementById('editCaseObjective').value.trim();
     const prerequisites = document.getElementById('editCasePrerequisites').value.trim();
     const variablesText = document.getElementById('editCaseVariables').value.trim();
-    
+
     if (!caseNumber) {
         alert('⚠️ El N° del Caso es obligatorio');
         document.getElementById('editCaseNumber').focus();
         return;
     }
-    
+
     if (!title) {
         alert('⚠️ El título del caso es obligatorio');
         document.getElementById('editCaseTitle').focus();
         return;
     }
-    
+
     // Encontrar el caso a editar
     const caseObj = currentRequirement.cases.find(c => c.id === caseId);
     if (!caseObj) {
         alert('❌ Error: Caso no encontrado');
         return;
     }
-    
+
     // Procesar variables
-    const variables = variablesText ? 
-        variablesText.split(',').map(v => v.trim()).filter(v => v) : 
+    const variables = variablesText ?
+        variablesText.split(',').map(v => v.trim()).filter(v => v) :
         ['Variable 1', 'Variable 2'];
-    
+
     // Actualizar caso
     caseObj.caseNumber = caseNumber;
     caseObj.title = title;
@@ -565,21 +577,21 @@ function handleEditCaseSubmit(e) {
     caseObj.prerequisites = prerequisites || 'A completar por tester';
     caseObj.inputVariableNames = variables;
     caseObj.updatedAt = new Date().toISOString();
-    
+
     // Si estamos editando el caso activo, actualizar variables globales
     if (currentCaseId === caseId) {
         inputVariableNames = variables;
     }
-    
+
     // Guardar cambios
     saveMulticaseData();
-    
+
     // Actualizar UI
     updateMulticaseUI();
-    
+
     // Cerrar modal
     closeEditCaseModal();
-    
+
     alert(`✅ Caso "${caseNumber}: ${title}" actualizado exitosamente`);
 }
 
@@ -588,46 +600,46 @@ function handleEditCaseSubmit(e) {
  */
 function handleNewCaseSubmit(e) {
     e.preventDefault();
-    
+
     const caseNumber = document.getElementById('newCaseNumber').value.trim();
     const title = document.getElementById('newCaseTitle').value.trim();
     const objective = document.getElementById('newCaseObjective').value.trim();
     const prerequisites = document.getElementById('newCasePrerequisites').value.trim();
     const variablesText = document.getElementById('newCaseVariables').value.trim();
-    
+
     if (!caseNumber) {
         alert('⚠️ El N° del Caso es obligatorio');
         document.getElementById('newCaseNumber').focus();
         return;
     }
-    
+
     if (!title) {
         alert('⚠️ El título del caso es obligatorio');
         document.getElementById('newCaseTitle').focus();
         return;
     }
-    
+
     // Procesar variables
-    const variables = variablesText ? 
-        variablesText.split(',').map(v => v.trim()).filter(v => v) : 
+    const variables = variablesText ?
+        variablesText.split(',').map(v => v.trim()).filter(v => v) :
         ['Variable 1', 'Variable 2'];
-    
+
     // Crear nuevo caso
     const newCase = addNewCase(title, objective, caseNumber);
     if (newCase) {
         // Configurar campos adicionales del nuevo caso
         newCase.inputVariableNames = variables;
         newCase.prerequisites = prerequisites || 'A completar por tester';
-        
+
         // Cambiar al nuevo caso
         switchToCaseUI(newCase.id);
-        
+
         // Actualizar UI
         updateMulticaseUI();
-        
+
         // Cerrar modal
         closeNewCaseModal();
-        
+
         alert(`✅ Caso "${caseNumber}: ${title}" creado exitosamente`);
     }
 }
@@ -641,11 +653,11 @@ function handleNewCaseSubmit(e) {
  */
 function updateMulticaseUI() {
     if (!isMulticaseMode()) return;
-    
+
     createRequirementHeader(); // 🆕 Actualiza info completa incluyendo "N° Caso Actual"
     createCaseNavigation();
     updateCurrentCaseContent();
-    
+
     // 🆕 Actualizar estadísticas si existe la función
     if (typeof updateStats === 'function') {
         updateStats();
@@ -657,18 +669,18 @@ function updateMulticaseUI() {
  */
 function initializeMulticaseUI() {
     console.log('🎨 Inicializando UI multicaso...');
-    
+
     if (!isMulticaseMode()) {
         console.log('⚠️ Modo multicaso no activo');
         return;
     }
-    
+
     // Crear componentes principales
     updateMulticaseUI();
-    
+
     // Configurar event listeners adicionales
     setupMulticaseEventListeners();
-    
+
     console.log('✅ UI multicaso inicializada');
 }
 
@@ -677,7 +689,7 @@ function initializeMulticaseUI() {
  */
 function setupMulticaseEventListeners() {
     // Cerrar modales al hacer clic fuera
-    window.addEventListener('click', function(event) {
+    window.addEventListener('click', function (event) {
         const modals = ['newCaseModal', 'editCaseModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);
@@ -721,13 +733,13 @@ function closeNewCaseModal() {
     const modal = document.getElementById('newCaseModal');
     if (modal) {
         modal.style.display = 'none';
-        
+
         // Limpiar formulario
         const form = document.getElementById('newCaseForm');
         if (form) {
             form.reset();
         }
-        
+
         console.log('✅ Modal de nuevo caso cerrado');
     }
 }
@@ -737,29 +749,29 @@ function closeNewCaseModal() {
  */
 function autoUpdateMulticaseUI() {
     if (!isMulticaseMode()) return;
-    
+
     console.log('🔄 Auto-actualizando UI multicaso...');
-    
+
     // 1. Actualizar estadísticas del requerimiento
     if (typeof updateRequirementStats === 'function' && currentRequirement) {
         updateRequirementStats(currentRequirement);
     }
-    
+
     // 2. Actualizar header del requerimiento
     if (typeof createRequirementHeader === 'function') {
         createRequirementHeader();
     }
-    
+
     // 3. Actualizar navegación/tarjetas de casos
     if (typeof createCaseNavigation === 'function') {
         createCaseNavigation();
     }
-    
+
     // 4. Guardar cambios actualizados
     if (typeof saveMulticaseData === 'function') {
         saveMulticaseData();
     }
-    
+
     console.log('✅ UI multicaso auto-actualizada');
 }
 
@@ -790,7 +802,7 @@ window.autoUpdateMulticaseUI = autoUpdateMulticaseUI;
 // ===============================================
 
 // Inicializar UI cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Esperar un momento para que se carguen otros scripts
     setTimeout(() => {
         if (isMulticaseMode()) {

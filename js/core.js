@@ -237,6 +237,15 @@ function setupEssentialEventListeners() {
         btnClearAll.addEventListener('click', clearAllData);
     }
 
+    const btnNewRequirement = document.getElementById('btnNewRequirement');
+    if (btnNewRequirement) {
+        btnNewRequirement.addEventListener('click', () => {
+            if (typeof openRequirementModal === 'function') {
+                openRequirementModal();
+            }
+        });
+    }
+
     // Event listeners para modales
     setupModalEventListeners();
 }
@@ -293,14 +302,17 @@ function clearAllData() {
     const confirmMessage = `⚠️ ¿Estás seguro de que deseas eliminar TODOS los datos?
 
 Esto eliminará:
-• Todos los casos de prueba
+• El requerimiento activo
+• Todos los casos y escenarios de prueba
 • Configuración de variables
-• Información del requerimiento
 • Historial y estadísticas
 
 ⚠️ Esta acción NO se puede deshacer.`;
 
     if (confirm(confirmMessage)) {
+        currentRequirement = null;
+        currentCaseId = null;
+        multicaseMode = false;
         // Limpiar variables del sistema original
         testCases = [];
         filteredCases = [];
@@ -316,7 +328,7 @@ Esto eliminará:
         };
         selectedCases.clear();
 
-        // 🎯 LIMPIAR TAMBIÉN SISTEMA MULTICASO
+        //  LIMPIAR TAMBIÉN SISTEMA MULTICASO
         localStorage.removeItem('currentRequirement');
         localStorage.removeItem('currentCaseId');
         localStorage.removeItem('multicaseMode');
@@ -332,16 +344,30 @@ Esto eliminará:
         localStorage.removeItem('requirementInfo');
         localStorage.removeItem('activeTab');
 
-        // 🎯 REINICIALIZAR SISTEMA MULTICASO
-        if (typeof enableMulticaseMode === 'function') {
+        //  REINICIALIZAR SISTEMA MULTICASO
+        /*if (typeof enableMulticaseMode === 'function') {
             enableMulticaseMode();
-        }
+        }*/
 
         // Actualizar interfaz
         if (typeof renderTestCases === 'function') renderTestCases();
         if (typeof updateStats === 'function') updateStats();
         if (typeof updateFilters === 'function') updateFilters();
         if (typeof updateMulticaseUI === 'function') updateMulticaseUI();
+
+        // ✅ FORZAR OCULTAR HEADER:
+        const header = document.getElementById('requirementHeader');
+        if (header) header.style.display = 'none';
+
+        // ✅ OCULTAR NAVEGACIÓN DE CASOS:
+        const caseNavigation = document.getElementById('caseNavigation');
+        if (caseNavigation) caseNavigation.style.display = 'none';
+
+        // ✅ OCULTAR HEADER DEL CASO ACTUAL:
+        const currentCaseHeader = document.getElementById('currentCaseHeader');
+        if (currentCaseHeader) currentCaseHeader.style.display = 'none';
+
+        updateRequirementButtons();
 
         alert('✅ Todos los datos han sido eliminados correctamente');
         console.log('🗑️ Todos los datos eliminados');

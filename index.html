@@ -27,6 +27,9 @@
                 <div class="tab-content-container">
                     <!-- Tab 1: Gestión -->
                     <div class="tab-content tab-active" id="tab-gestion">
+                        <button class="btn btn-success" id="btnNewRequirement" style="display: none;">
+                            ➕ Nuevo Requerimiento
+                        </button>
                         <button class="btn btn-success" id="btnAddCase">➕ Nuevo Escenario</button>
                         <button class="btn btn-info" id="btnGenerateReport">📊 Generar Reporte</button>
                     </div>
@@ -45,9 +48,9 @@
 
                     <!-- Tab 4: Configuración -->
                     <div class="tab-content" id="tab-config">
-                        <button class="btn btn-info" onclick="openRequirementModal()">🎯 Requerimiento Setup</button>
-                        <button class="btn btn-variable" id="btnConfigVars">⚙️ Configurar Variables</button>
-                        
+                        <button class="btn btn-info" onclick="openRequirementModal()">🎯 Editar Requerimiento</button>
+                        <button class="btn btn-variable" id="btnConfigVars">⚙️ Editar Variables</button>
+
 
                         <!-- Switch de Tema aquí -->
                         <div class="theme-switch-container">
@@ -61,7 +64,8 @@
                             </div>
                         </div>
 
-                        <button class="btn btn-warning" onclick="renumberCycle1()">🔢 Renumerar Ciclos y Escenarios</button>
+                        <button class="btn btn-warning" onclick="renumberCycle1()">🔢 Renumerar Ciclos y
+                            Escenarios</button>
 
                         <button class="btn btn-info btn-dev-only" id="btnForceUpdate" style="display: none;">🔄 Forzar
                             Update</button>
@@ -150,7 +154,7 @@
                     </div>
 
                     <div class="form-row">
-                        
+
                     </div>
 
                     <div class="form-row">
@@ -530,12 +534,12 @@
         // 🎯 INICIALIZACIÓN INMEDIATA DEL SISTEMA MULTICASO
         document.addEventListener('DOMContentLoaded', function () {
             console.log('🚀 DOM cargado, inicializando sistema multicaso inmediatamente...');
-            
+
             // Llamar directamente a la inicialización del sistema multicaso
             if (typeof initializeMulticaseSystem === 'function') {
                 initializeMulticaseSystem();
             }
-            
+
             // Forzar actualización de UI multicaso después de un breve delay
             setTimeout(() => {
                 if (typeof updateMulticaseUI === 'function') {
@@ -628,4 +632,5 @@
         }
     </script>
 </body>
+
 </html>
